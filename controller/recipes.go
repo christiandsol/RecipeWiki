@@ -15,7 +15,14 @@ func (s *Store) AddRecipe(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(bytesRead, &recipe)
 
 	fmt.Printf("HERE\n")
-	id := s.GenerateID()
+	id, err := s.GenerateID(recipe.Name)
+	if err != nil {
+		fmt.Println("[ERROR] Generating new id")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`[ERROR] Generating new id, 
+			recipe name may already be in use`))
+		return
+	}
 	s.Mu.Lock()
 	defer s.Mu.Unlock()
 	s.Recipes = append(s.Recipes, Recipe{
@@ -26,9 +33,44 @@ func (s *Store) AddRecipe(w http.ResponseWriter, r *http.Request) {
 		Steps:       recipe.Steps,
 		Info:        recipe.Info,
 	})
-	_, err = w.Write([]byte("SUCCESS"))
-	errUtil.CheckErr("Writing buf", nil, err)
+	data, err := json.Marshal(map[string]interface{}{
+		"id": id,
+	})
+	if err != nil {
+		fmt.Println("[ERROR] Unable to marshal id")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`[ERROR] Unable to marshal id`))
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(data)
+	if err != nil {
+		fmt.Println("[ERROR] Unable to write response")
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`[ERROR] Unable write response`))
+		return
+	}
 	printRecipes(s.Recipes)
+}
+
+func (s *Store) GetRecipes(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("GETTING RECIPES")
+	var recipes struct {
+		Recipes []Recipe `json:"recipes"`
+	}
+	if s.Recipes == nil {
+		recipes.Recipes = []Recipe{}
+	} else {
+		recipes.Recipes = s.Recipes
+	}
+	msg, err := json.Marshal(recipes)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Bad request, fix json"))
+		return
+	}
+	w.Write(msg)
 }
 
 func (s *Store) GetRecipe(w http.ResponseWriter, r *http.Request) {

@@ -4,17 +4,24 @@ import (
 	"sync"
 )
 
+func NewStore() *Store {
+	return &Store{
+		NameID: make(map[string]int),
+	}
+}
+
 type Store struct {
 	Mu      sync.Mutex
 	Recipes []Recipe
 	NextID  int
+	NameID  map[string]int
 }
 
 type Ingredient struct {
 	RecipeID  int    `json:"id"` // ID ingredient belongs to
 	Name      string `json:"name"`
 	Amount    int    `json:"amount"`
-	Specifier int    `json:"specifier"`
+	Specifier string `json:"specifier"`
 }
 
 type Recipe struct {

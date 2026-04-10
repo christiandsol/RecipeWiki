@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -36,12 +37,18 @@ func printRecipes(recipes []Recipe) {
 }
 
 /* ============Generator============*/
-func (s *Store) GenerateID() int {
-	s.Mu.Lock()
-	defer s.Mu.Unlock()
-	new_id := s.NextID
-	s.NextID++
-	return new_id
+func (s *Store) GenerateID(name string) (int, error) {
+	_, ok := s.NameID[name]
+	if !ok {
+		s.Mu.Lock()
+		defer s.Mu.Unlock()
+		new_id := s.NextID
+		s.NameID[name] = new_id
+		s.NextID++
+		return new_id, nil
+	} else {
+		return -1, errors.New("recipe name already exist")
+	}
 }
 
 func (s *Store) FindRecipeByID(RecipeID int) (*Recipe, error) {

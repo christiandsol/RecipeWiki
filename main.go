@@ -17,11 +17,12 @@ const (
 )
 
 // =========================GLOBALS==============================
-var store = &c.Store{}
+var store = c.NewStore()
 
 func addCorsHeader(res http.ResponseWriter) {
 	headers := res.Header()
 	headers.Add("Access-Control-Allow-Origin", "*")
+	headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 }
 
 func CorsHandler(next http.Handler) http.Handler {
@@ -37,8 +38,10 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", c.Home)
 	mux.HandleFunc("POST /ingredient", store.AddIngredient)
+	mux.HandleFunc("POST /ingredients", store.GetIngredients)
 	mux.HandleFunc("POST /recipe", store.AddRecipe)
 	mux.HandleFunc("GET /recipe", store.GetRecipe)
+	mux.HandleFunc("GET /recipes", store.GetRecipes)
 	err := http.ListenAndServe("0.0.0.0:8080", CorsHandler(mux))
 	errUtil.CheckErr("Error Starting server", nil, err)
 }
