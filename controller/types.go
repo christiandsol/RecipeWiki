@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"github.com/jackc/pgx/v5"
 	"sync"
 )
 
@@ -10,18 +11,35 @@ func NewStore() *Store {
 	}
 }
 
+type Global struct {
+	Conn *pgx.Conn
+}
+
 type Store struct {
-	Mu      sync.Mutex
-	Recipes []Recipe
-	NextID  int
-	NameID  map[string]int
+	Mu               sync.Mutex
+	Recipes          []Recipe
+	NextID           int
+	NameID           map[string]int
+	NextIngredientID int
 }
 
 type Ingredient struct {
-	RecipeID  int    `json:"id"` // ID ingredient belongs to
-	Name      string `json:"name"`
-	Amount    int    `json:"amount"`
-	Specifier string `json:"specifier"`
+	RecipeID      int    `json:"id"` // ID ingredient belongs to
+	Name          string `json:"name"`
+	Amount        int    `json:"amount"`
+	Specifier     string `json:"specifier"`
+	CurrentAmount string `json:"current_amount"` // "high", "medium", "low"
+}
+
+type UpdateIngredient struct {
+	RecipeID   int        `json:"id"` // ID ingredient belongs to
+	PrevName   string     `json:"prev_name"`
+	Ingredient Ingredient `json:"ingredient"`
+}
+
+type DeleteIngredient struct {
+	RecipeID int    `json:"id"` // ID ingredient belongs to
+	Name     string `json:"name"`
 }
 
 type Recipe struct {

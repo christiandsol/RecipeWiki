@@ -1,45 +1,38 @@
 <script lang="ts">
 	import "./recipe.css";
-	import { Ingredient } from "$lib/ingredients";
-	type IngredientRes = {
-		id?: number;
+	import { type Ingredients } from "$lib/types";
+	import { PUBLIC_URL } from "$env/static/public";
+	let { data: props } = $props();
+	let listIngredients: Array<{
 		name: string;
 		amount: number;
 		specifier: number;
-	};
-	type Ingredients = {
-		ingredients: Array<IngredientRes>;
-	};
-	let { data: props } = $props();
-	console.log(`RECEIVED PROP: data: ${props.id}`);
-	const PORT = 8080;
-	const URL = `http://localhost:${PORT}`;
-	let listIngredients: Array<{
-		name: string;
-		amount: string;
-		specifier: string;
 	}> = $state([]);
 	$effect(() => {
 		const send = async () => {
-			const response = await fetch(`${URL}/ingredients`, {
+			const response = await fetch(`${PUBLIC_URL}/ingredients`, {
 				method: "POST",
 				body: JSON.stringify({
 					id: props.id,
 				}),
 			});
 			const ingredients: Ingredients = await response.json();
-			listIngredients = ingredients.ingredients.map((item) => ({
-				name: item.name,
-				amount: String(item.amount),
-				specifier: item.specifier,
-			}));
+			if (ingredients.ingredients != null) {
+				listIngredients = ingredients.ingredients.map((item) => ({
+					name: item.name,
+					id: item.id,
+					amount: item.amount,
+					specifier: item.specifier,
+				}));
+			}
 		};
 		send();
 	});
+
 	const addIngredient = async (e: SubmitEvent) => {
 		e.preventDefault();
 		const formData = new FormData(e.target as HTMLFormElement);
-		const response = await fetch(`${URL}/ingredient`, {
+		const response = await fetch(`${PUBLIC_URL}/ingredient`, {
 			method: "POST",
 			body: JSON.stringify({
 				id: props.id,
@@ -48,11 +41,53 @@
 				specifier: formData.get("specifier")?.toString().toLowerCase(),
 			}),
 		});
+
 		if (response.ok) {
 			listIngredients.push({
 				name: formData.get("ingredient") as string,
-				amount: formData.get("amount") as string,
-				specifier: formData.get("specifier") as string,
+				amount: Number(formData.get("amount")),
+				specifier: Number(formData.get("specifier")),
+			});
+		}
+	};
+
+	const deleteIngredient = async (e: MouseEvent) => {
+		e.preventDefault();
+		const formData = new FormData(e.target as HTMLFormElement);
+		const response = await fetch(`${PUBLIC_URL}/ingredient`, {
+			method: "DELETE",
+			body: JSON.stringify({
+				id: props.id,
+				name: formData.get("ingredient")?.toString().toLowerCase(),
+			}),
+		});
+
+		if (response.ok) {
+			listIngredients.push({
+				name: formData.get("ingredient") as string,
+				amount: Number(formData.get("amount")),
+				specifier: Number(formData.get("specifier")),
+			});
+		}
+	};
+	const updateIngredient = async (e: SubmitEvent) => {
+		e.preventDefault();
+		const formData = new FormData(e.target as HTMLFormElement);
+		const response = await fetch(`${PUBLIC_URL}/ingredient`, {
+			method: "UPDATE",
+			body: JSON.stringify({
+				id: props.id,
+				name: formData.get("ingredient")?.toString().toLowerCase(),
+				amount: Number(formData.get("amount")),
+				specifier: formData.get("specifier")?.toString().toLowerCase(),
+			}),
+		});
+
+		if (response.ok) {
+			listIngredients.push({
+				name: formData.get("ingredient") as string,
+				amount: Number(formData.get("amount")),
+				specifier: Number(formData.get("specifier")),
 			});
 		}
 	};
@@ -122,6 +157,11 @@
 						<span class="ingredient-measure">
 							<span class="ingredient-amount">{item.amount}</span>
 							<span class="ingredient-unit">{item.specifier}</span
+							>
+							<button
+								onclick={(e: MouseEvent) => {
+									deleteIngredient(e);
+								}}>Remove</button
 							>
 						</span>
 					</li>

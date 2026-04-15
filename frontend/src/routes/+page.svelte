@@ -1,31 +1,22 @@
 <script lang="ts">
 	import "./home.css";
-
-	type RecipeRes = {
-		name: string;
-		description: string;
-		id: number;
-	};
-	type Recipes = {
-		recipes: Array<RecipeRes>;
-	};
-	type Response = {
-		id: number;
-	};
 	import { goto } from "$app/navigation";
-	import { get } from "svelte/store";
+	import { type Recipes, type RecipeRes, type Response } from "$lib/types";
+	import { PUBLIC_SERVER_URL, PUBLIC_SERVER_PORT } from "$env/static/public";
+
 	let listRecipes: Array<{
 		id: number;
 		name: string | undefined;
 		description: string | undefined;
 	}> = $state([]);
-	const PORT = 8080;
-	const URL = `http://localhost:${PORT}`;
+	const URL = `${PUBLIC_SERVER_URL}:${PUBLIC_SERVER_PORT}`;
+	console.log(`URL: ${URL}`);
+
 	$effect(() => {
 		const getRecipes = async () => {
-			console.log("FETCHING");
 			const response = await fetch(`${URL}/recipes`, { method: "GET" });
 			const data: Recipes = await response.json();
+			console.log(`recipes: ${data}`);
 			listRecipes = data.recipes.map((item: RecipeRes) => ({
 				id: item.id,
 				name: item.name,
@@ -34,7 +25,8 @@
 		};
 		getRecipes();
 	});
-	const addRecipe = async (e: SubmitEvent) => {
+
+	export const addRecipe = async (e: SubmitEvent) => {
 		e.preventDefault();
 		const formData = new FormData(e.target as HTMLFormElement);
 		const response = await fetch(`${URL}/recipe`, {
