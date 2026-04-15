@@ -152,13 +152,13 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", c.Home)
-	mux.HandleFunc("POST /ingredients", store.GetIngredients)
-	mux.HandleFunc("POST /ingredient", store.AddIngredient)
-	mux.HandleFunc("DELETE /ingredient", store.DeleteIngredient)
-	mux.HandleFunc("PUT /ingredient", store.UpdateIngredient)
+	mux.HandleFunc("POST /ingredients", global.GetIngredients)
+	mux.HandleFunc("POST /ingredient", global.AddIngredient)
+	mux.HandleFunc("DELETE /ingredient", global.DeleteIngredient)
+	mux.HandleFunc("PUT /ingredient", global.UpdateIngredient)
 	mux.HandleFunc("GET /recipes", global.GetRecipes)
 	mux.HandleFunc("POST /recipe", global.AddRecipe)
-	mux.HandleFunc("GET /recipe", store.GetRecipe)
+	// mux.HandleFunc("GET /recipe", store.GetRecipe)
 	err = http.ListenAndServe("0.0.0.0:8080", CorsHandler(mux))
 	errUtil.CheckErr("Error Starting server", nil, err)
 }

@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-
-	"github.com/christiandsol/main/errUtil"
 )
 
 func (g *Global) GetRecipes(w http.ResponseWriter, r *http.Request) {
@@ -27,24 +25,6 @@ func (g *Global) GetRecipes(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Printf("[DEBUG] get recipes msg: %v\n", string(msg))
 	w.Write(msg)
-}
-
-func (s *Store) GetRecipe(w http.ResponseWriter, r *http.Request) {
-	bytesRead, err := io.ReadAll(r.Body)
-	errUtil.CheckErr("Error getting recipe", nil, err)
-	if err == nil {
-		w.Write([]byte("Error getting recipe"))
-		return
-	}
-	var recipe Recipe
-	err = json.Unmarshal(bytesRead, &recipe)
-	errUtil.CheckErr("Error Marshalling recipe", nil, err)
-	if err == nil {
-		w.Write([]byte("Error Marshalling recipe"))
-		return
-	}
-	json, err := json.Marshal(recipe)
-	w.Write(json)
 }
 
 func (g *Global) AddRecipe(w http.ResponseWriter, r *http.Request) {
