@@ -29,7 +29,7 @@ type Ingredient struct {
 	Name          string  `json:"name"`
 	Amount        int     `json:"amount"`
 	Specifier     string  `json:"specifier"`
-	CurrentAmount *string `json:"current_amount"` // "high", "medium", "low"
+	CurrentAmount *string `json:"current_amount"` // "high", "medium", "low", "out"
 }
 
 type UpdateIng struct {

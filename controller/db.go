@@ -80,18 +80,22 @@ func RemoveIngredient(conn *pgx.Conn, id int) error {
 func UpdateIngredient(conn *pgx.Conn, i Ingredient) error {
 	_, err := conn.Exec(context.Background(), `
 		UPDATE ingredients
-		SET recipe_id       = $2,
-				name            = $3,
-				amount          = $4,
-				specifier       = $5,
-				current_amount  = $6,
+		SET recipe_id      = $2,
+			name           = $3,
+			amount         = $4,
+			specifier      = $5,
+			current_amount = $6
 		WHERE id = $1
-		`, i.RecipeID, i.Name, i.Amount, i.Specifier, i.CurrentAmount, i.IngredientId,
+	`,
+		i.IngredientId,
+		i.RecipeID,
+		i.Name,
+		i.Amount,
+		i.Specifier,
+		i.CurrentAmount,
 	)
-	if err != nil {
-		return err
-	}
-	return nil
+
+	return err
 }
 
 func CreateTables(conn *pgx.Conn) error {

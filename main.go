@@ -26,13 +26,19 @@ var store = c.NewStore()
 func addCorsHeader(res http.ResponseWriter) {
 	headers := res.Header()
 	headers.Add("Access-Control-Allow-Origin", "*")
-	headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE")
+	headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE, PATCH")
+	headers.Set("Access-Control-Allow-Headers", "Content-Type")
+
 }
 
 func CorsHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(res http.ResponseWriter, req *http.Request) {
 			addCorsHeader(res)
+			if req.Method == http.MethodOptions {
+				res.WriteHeader(http.StatusNoContent)
+				return
+			}
 			next.ServeHTTP(res, req)
 		},
 	)
@@ -154,7 +160,7 @@ func main() {
 	mux.HandleFunc("POST /ingredients", global.GetIngredients)
 	mux.HandleFunc("POST /ingredient", global.AddIngredient)
 	mux.HandleFunc("DELETE /ingredient", global.DeleteIngredient)
-	mux.HandleFunc("PUT /ingredient", global.UpdateIngredient)
+	mux.HandleFunc("PATCH /ingredient", global.UpdateIngredient)
 	mux.HandleFunc("GET /recipes", global.GetRecipes)
 	mux.HandleFunc("POST /recipe", global.AddRecipe)
 	mux.HandleFunc("DELETE /recipe", global.DeleteRecipe)

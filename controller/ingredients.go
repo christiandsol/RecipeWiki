@@ -80,6 +80,8 @@ func (g *Global) AddIngredient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Printf("Printing ingredient: %v", ingredient)
+
 	ingredientId, err := InsertIngredient(g.Conn, ingredient)
 	if err != nil {
 		fmt.Printf("[ERROR] Error inserting ingredient\n")
@@ -139,6 +141,7 @@ func (g *Global) UpdateIngredient(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(bytesRead, &ingredient)
 	errUtil.CheckErr("Error Unmarshalling", nil, err)
 	if err != nil {
+		fmt.Printf("[ERROR] Invalid JSON for %v", string(bytesRead))
 		w.WriteHeader(http.StatusBadRequest)
 		io.WriteString(w, "Check that JSON is valid and RecipeID is filled")
 		return
@@ -146,7 +149,8 @@ func (g *Global) UpdateIngredient(w http.ResponseWriter, r *http.Request) {
 
 	err = UpdateIngredient(g.Conn, ingredient)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		fmt.Printf("[ERROR] Unable to update ingredient from server side: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
 		io.WriteString(w, "Unable to upate ingredient")
 		return
 	}

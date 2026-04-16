@@ -8,14 +8,16 @@
 	import { PUBLIC_URL } from "$env/static/public";
 	let { data: props } = $props();
 	console.log(`id passed: ${props.id}`);
-	let listIngredients: Array<IngredientRes> = $state([]);
+	let listIngredients: Array<IngredientRes & { priority?: string }> = $state(
+		[],
+	);
+	let openDropdown: string | null = $state(null);
+
 	$effect(() => {
 		const send = async () => {
 			const response = await fetch(`${PUBLIC_URL}/ingredients`, {
 				method: "POST",
-				body: JSON.stringify({
-					id: props.id,
-				}),
+				body: JSON.stringify({ id: props.id }),
 			});
 			const ingredients: Ingredients = await response.json();
 			if (ingredients.ingredients != null) {
@@ -25,6 +27,7 @@
 					name: item.name,
 					amount: item.amount,
 					specifier: item.specifier,
+					priority: item.current_amount,
 				}));
 			}
 		};
@@ -38,21 +41,21 @@
 			method: "POST",
 			body: JSON.stringify({
 				id: props.id,
-				name: formData.get("ingredient")?.toString().toLowerCase(),
+				name: formData.get("ingredient")?.toString(),
 				amount: Number(formData.get("amount")),
-				specifier: formData.get("specifier")?.toString().toLowerCase(),
+				specifier: formData.get("specifier")?.toString(),
+				current_amount: "out",
 			}),
 		});
 
 		const data: Response = await response.json();
-
-		console.log(`Id recieved: ${data.id}`);
 		if (response.ok) {
 			listIngredients.push({
 				id: data.id,
 				name: formData.get("ingredient") as string,
 				amount: Number(formData.get("amount")),
 				specifier: formData.get("specifier"),
+				priority: "none",
 			});
 		}
 	};
@@ -73,7 +76,6 @@
 			listIngredients = listIngredients.filter(
 				(i) => i.ingredient_id !== item.ingredient_id,
 			);
-			console.log(msg);
 		} else {
 			console.log(
 				`[ERROR] Error deleting ingredient, server responded ${msg}`,
@@ -81,16 +83,51 @@
 		}
 	};
 
-	const updateIngredient = async (e: SubmitEvent, ingr: IngredientRes) => {
-		e.preventDefault();
-		const formData = new FormData(e.target as HTMLFormElement);
+	const setPriority = async (i: IngredientRes, priority: string) => {
+		i.current_amount = priority;
+		console.log(`Sending ingredient with amount: ${i.current_amount}`);
 		const response = await fetch(`${PUBLIC_URL}/ingredient`, {
 			method: "PATCH",
-			body: JSON.stringify(ingr),
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(i),
 		});
-		//TODO: implement how you wan to update ingredient
+		const msg = await response.text();
+		if (!response.ok) {
+			console.log(`Successfully updated Ingredient`);
+			console.log(`[ERROR] Unable to update amount: ${msg}`);
+			return;
+		}
+		listIngredients = listIngredients.map((item) =>
+			item.ingredient_id === i.ingredient_id
+				? { ...item, priority }
+				: item,
+		);
+		openDropdown = null;
 	};
+
+	const toggleDropdown = (e: MouseEvent, ingredientId: string) => {
+		e.stopPropagation();
+		openDropdown = openDropdown === ingredientId ? null : ingredientId;
+	};
+
+	const closeAllDropdowns = () => {
+		openDropdown = null;
+	};
+
+	const priorities = [
+		{ value: "high", label: "High", color: "#f87171", bg: "#fef2f2" },
+		{ value: "medium", label: "Medium", color: "#fb923c", bg: "#fff7ed" },
+		{ value: "low", label: "Low", color: "#4ade80", bg: "#f0fdf4" },
+		{ value: "none", label: "None", color: "#94a3b8", bg: "#f1f5f9" },
+	];
+
+	const getPriority = (value: string) =>
+		priorities.find((p) => p.value === value) ?? priorities[3];
 </script>
+
+<svelte:window onclick={closeAllDropdowns} />
 
 <main class="page">
 	<section class="form-section">
@@ -151,21 +188,75 @@
 		{:else}
 			<ul class="ingredient-list">
 				{#each listIngredients as item}
+					{@const p = getPriority(item.priority ?? "none")}
 					<li class="ingredient-item">
 						<span class="ingredient-name">{item.name}</span>
 						<span class="ingredient-measure">
 							<span class="ingredient-amount">{item.amount}</span>
 							<span class="ingredient-unit">{item.specifier}</span
 							>
+
+							<!-- Priority dropdown -->
+							<div class="priority-wrapper">
+								<button
+									class="priority-badge"
+									style="color: {p.color}; background: {p.bg};"
+									onclick={(e) =>
+										toggleDropdown(e, item.ingredient_id)}
+								>
+									<span
+										class="priority-dot"
+										style="background:{p.color};"
+									></span>
+									{p.label}
+									<svg
+										class="priority-chevron"
+										viewBox="0 0 10 6"
+										fill="none"
+									>
+										<path
+											d="M1 1l4 4 4-4"
+											stroke="currentColor"
+											stroke-width="1.5"
+											stroke-linecap="round"
+										/>
+									</svg>
+								</button>
+
+								{#if openDropdown === item.ingredient_id}
+									<ul
+										class="priority-menu"
+										onclick={(e) => e.stopPropagation()}
+									>
+										{#each priorities as opt}
+											<li>
+												<button
+													class="priority-option"
+													class:priority-option--active={item.priority ===
+														opt.value}
+													style="--opt-color:{opt.color}; --opt-bg:{opt.bg};"
+													onclick={() =>
+														setPriority(
+															item,
+															opt.value,
+														)}
+												>
+													<span
+														class="priority-dot"
+														style="background:{opt.color};"
+													></span>
+													{opt.label}
+												</button>
+											</li>
+										{/each}
+									</ul>
+								{/if}
+							</div>
+
 							<button
-								onclick={(e: MouseEvent) => {
-									deleteIngredient(e, item);
-								}}>Remove</button
-							>
-							<button
-								onclick={(e: MouseEvent) => {
-									updateIngredient(e, item);
-								}}>Remove</button
+								class="remove-btn"
+								onclick={(e) => deleteIngredient(e, item)}
+								>Remove</button
 							>
 						</span>
 					</li>
