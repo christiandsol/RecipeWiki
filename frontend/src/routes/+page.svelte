@@ -2,7 +2,11 @@
 	import "./home.css";
 	import { goto } from "$app/navigation";
 	import { type Recipes, type RecipeRes, type Response } from "$lib/types";
-	import { PUBLIC_SERVER_URL, PUBLIC_SERVER_PORT } from "$env/static/public";
+	import {
+		PUBLIC_SERVER_URL,
+		PUBLIC_SERVER_PORT,
+		PUBLIC_URL,
+	} from "$env/static/public";
 
 	let listRecipes: Array<{
 		id: number;
@@ -56,6 +60,24 @@
 			goto(`/recipe/${data.id}`);
 		}
 	};
+
+	export const deleteRecipe = async (e: SubmitEvent, recipeId: Number) => {
+		const response = await fetch(`${PUBLIC_URL}/recipe`, {
+			method: "DELETE",
+			body: JSON.stringify({
+				recipe_id: recipeId,
+			}),
+		});
+
+		const msg = await response.text();
+		if (response.ok) {
+			listRecipes = listRecipes.filter((r) => r.id !== recipeId);
+		} else {
+			console.log(
+				`[ERROR] Error deleting recipe, server responded ${msg}`,
+			);
+		}
+	};
 </script>
 
 <main class="page">
@@ -71,10 +93,22 @@
 		{:else}
 			<div class="recipe-grid">
 				{#each listRecipes as recipe}
-					<button
+					<div
 						class="recipe-card"
 						onclick={() => goto(`/recipe/${recipe.id}`)}
+						role="button"
+						tabindex="0"
+						onkeydown={(e) =>
+							e.key === "Enter" && goto(`/recipe/${recipe.id}`)}
 					>
+						<button
+							class="recipe-card-delete"
+							onclick={(e) => {
+								e.stopPropagation();
+								deleteRecipe(e, recipe.id);
+							}}
+							aria-label="Delete recipe">✕</button
+						>
 						<div class="recipe-card-image">
 							<img
 								src="https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=400&q=80"
@@ -89,7 +123,7 @@
 								</p>
 							{/if}
 						</div>
-					</button>
+					</div>
 				{/each}
 			</div>
 		{/if}

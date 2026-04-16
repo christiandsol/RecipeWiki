@@ -68,3 +68,35 @@ func (g *Global) AddRecipe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+func (g *Global) DeleteRecipe(w http.ResponseWriter, r *http.Request) {
+	bytesRead, err := io.ReadAll(r.Body)
+	if err != nil {
+		fmt.Printf("[ERROR] Unable to read request: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(`[ERROR] Unable to read request`))
+		return
+	}
+	type DeleteRec struct {
+		RecipeId int `json:"recipe_id"`
+	}
+	var deleteRec DeleteRec
+	err = json.Unmarshal(bytesRead, &deleteRec)
+	if err != nil {
+		fmt.Printf("[ERROR] Unable to unmarshal bytes read: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`[ERROR] Unable to marshal bytes read`))
+		return
+	}
+
+	err = RemoveRecipe(g.Conn, deleteRec.RecipeId)
+	if err != nil {
+		fmt.Printf("[ERROR] Unable to remove recipe", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`[ERROR] Unable to remove recipe`))
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Successfully deleted recipe"))
+}

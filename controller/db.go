@@ -183,3 +183,12 @@ func QueryIngredients(conn *pgx.Conn) ([]Ingredient, error) {
 
 	return ingredients, nil
 }
+
+func RemoveRecipe(conn *pgx.Conn, recipeId int) error {
+	_, err := conn.Exec(context.Background(),
+		`DELETE FROM recipes WHERE id = $1`, recipeId)
+	if err != nil {
+		return err
+	}
+	return nil
+}

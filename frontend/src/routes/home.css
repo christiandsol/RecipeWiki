@@ -58,6 +58,7 @@
     padding: 0;
     transition: transform 0.18s ease, box-shadow 0.18s ease;
     width: 100%;
+    position: relative
 }
 
 .recipe-card:hover {
@@ -191,4 +192,41 @@ input::placeholder {
 .submit-btn:active {
     transform: scale(0.98);
     background: #000;
+}
+
+
+/* ── Delete button ── */
+.recipe-card-delete {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.6rem;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    border: none;
+    background: rgba(0, 0, 0, 0.45);
+    color: #fff;
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.18s ease, background 0.15s ease, transform 0.1s ease;
+    backdrop-filter: blur(4px);
+    z-index: 1;
+}
+
+.recipe-card:hover .recipe-card-delete {
+    opacity: 1;
+}
+
+.recipe-card-delete:hover {
+    background: rgba(220, 50, 50, 0.85);
+    transform: scale(1.1);
+}
+
+.recipe-card-delete:active {
+    transform: scale(0.95);
 }

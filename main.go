@@ -158,6 +158,7 @@ func main() {
 	mux.HandleFunc("PUT /ingredient", global.UpdateIngredient)
 	mux.HandleFunc("GET /recipes", global.GetRecipes)
 	mux.HandleFunc("POST /recipe", global.AddRecipe)
+	mux.HandleFunc("DELETE /recipe", global.DeleteRecipe)
 	// mux.HandleFunc("GET /recipe", store.GetRecipe)
 	err = http.ListenAndServe("0.0.0.0:8080", CorsHandler(mux))
 	errUtil.CheckErr("Error Starting server", nil, err)
