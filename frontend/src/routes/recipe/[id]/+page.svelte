@@ -1,13 +1,14 @@
 <script lang="ts">
 	import "./recipe.css";
-	import { type Ingredients } from "$lib/types";
+	import {
+		type Ingredients,
+		type Response,
+		type IngredientRes,
+	} from "$lib/types";
 	import { PUBLIC_URL } from "$env/static/public";
 	let { data: props } = $props();
-	let listIngredients: Array<{
-		name: string;
-		amount: number;
-		specifier: number;
-	}> = $state([]);
+	console.log(`id passed: ${props.id}`);
+	let listIngredients: Array<IngredientRes> = $state([]);
 	$effect(() => {
 		const send = async () => {
 			const response = await fetch(`${PUBLIC_URL}/ingredients`, {
@@ -19,8 +20,9 @@
 			const ingredients: Ingredients = await response.json();
 			if (ingredients.ingredients != null) {
 				listIngredients = ingredients.ingredients.map((item) => ({
-					name: item.name,
 					id: item.id,
+					ingredient_id: item.ingredient_id,
+					name: item.name,
 					amount: item.amount,
 					specifier: item.specifier,
 				}));
@@ -42,54 +44,51 @@
 			}),
 		});
 
+		const data: Response = await response.json();
+
+		console.log(`Id recieved: ${data.id}`);
 		if (response.ok) {
 			listIngredients.push({
+				id: data.id,
 				name: formData.get("ingredient") as string,
 				amount: Number(formData.get("amount")),
-				specifier: Number(formData.get("specifier")),
+				specifier: formData.get("specifier"),
 			});
 		}
 	};
 
-	const deleteIngredient = async (e: MouseEvent) => {
+	const deleteIngredient = async (e: MouseEvent, item: IngredientRes) => {
 		e.preventDefault();
-		const formData = new FormData(e.target as HTMLFormElement);
 		const response = await fetch(`${PUBLIC_URL}/ingredient`, {
 			method: "DELETE",
 			body: JSON.stringify({
-				id: props.id,
-				name: formData.get("ingredient")?.toString().toLowerCase(),
+				recipe_id: props.id,
+				id: item.ingredient_id,
+				name: item.name.toLowerCase(),
 			}),
 		});
 
+		const msg = await response.text();
 		if (response.ok) {
-			listIngredients.push({
-				name: formData.get("ingredient") as string,
-				amount: Number(formData.get("amount")),
-				specifier: Number(formData.get("specifier")),
-			});
+			listIngredients = listIngredients.filter(
+				(i) => i.ingredient_id !== item.ingredient_id,
+			);
+			console.log(msg);
+		} else {
+			console.log(
+				`[ERROR] Error deleting ingredient, server responded ${msg}`,
+			);
 		}
 	};
-	const updateIngredient = async (e: SubmitEvent) => {
+
+	const updateIngredient = async (e: SubmitEvent, ingr: IngredientRes) => {
 		e.preventDefault();
 		const formData = new FormData(e.target as HTMLFormElement);
 		const response = await fetch(`${PUBLIC_URL}/ingredient`, {
-			method: "UPDATE",
-			body: JSON.stringify({
-				id: props.id,
-				name: formData.get("ingredient")?.toString().toLowerCase(),
-				amount: Number(formData.get("amount")),
-				specifier: formData.get("specifier")?.toString().toLowerCase(),
-			}),
+			method: "PATCH",
+			body: JSON.stringify(ingr),
 		});
-
-		if (response.ok) {
-			listIngredients.push({
-				name: formData.get("ingredient") as string,
-				amount: Number(formData.get("amount")),
-				specifier: Number(formData.get("specifier")),
-			});
-		}
+		//TODO: implement how you wan to update ingredient
 	};
 </script>
 
@@ -160,7 +159,12 @@
 							>
 							<button
 								onclick={(e: MouseEvent) => {
-									deleteIngredient(e);
+									deleteIngredient(e, item);
+								}}>Remove</button
+							>
+							<button
+								onclick={(e: MouseEvent) => {
+									updateIngredient(e, item);
 								}}>Remove</button
 							>
 						</span>

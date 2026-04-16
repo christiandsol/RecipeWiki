@@ -6,6 +6,25 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+func FindIngredients(conn *pgx.Conn, recipeId int) ([]Ingredient, error) {
+	var ingredients []Ingredient
+	rows, err := conn.Query(context.Background(),
+		`SELECT id, recipe_id, name, amount, specifier, current_amount FROM ingredients WHERE recipe_id = $1`, recipeId,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var i Ingredient
+		err := rows.Scan(&i.IngredientId, &i.RecipeID, &i.Name, &i.Amount, &i.Specifier, &i.CurrentAmount)
+		if err != nil {
+			return nil, err
+		}
+		ingredients = append(ingredients, i)
+	}
+	return ingredients, nil
+}
 func FindRecipeByID(conn *pgx.Conn, id int) (*Recipe, error) {
 	var r Recipe
 	err := conn.QueryRow(context.Background(),
@@ -36,15 +55,17 @@ func FindRecipeByID(conn *pgx.Conn, id int) (*Recipe, error) {
 	return &r, nil
 }
 
-func InsertIngredient(conn *pgx.Conn, i Ingredient) error {
+func InsertIngredient(conn *pgx.Conn, i Ingredient) (int, error) {
 	fmt.Println(i)
-	_, err := conn.Exec(context.Background(),
+	var ingredientID int
+	err := conn.QueryRow(context.Background(),
 		`INSERT INTO ingredients (recipe_id, name, amount, specifier)
-             VALUES ($1, $2, $3, $4)`, i.RecipeID, i.Name, i.Amount, i.Specifier)
+             VALUES ($1, $2, $3, $4) RETURNING id`,
+		i.RecipeID, i.Name, i.Amount, i.Specifier).Scan(&ingredientID)
 	if err != nil {
-		return err
+		return -1, err
 	}
-	return nil
+	return ingredientID, nil
 }
 
 func RemoveIngredient(conn *pgx.Conn, id int) error {

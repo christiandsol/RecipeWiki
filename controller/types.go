@@ -24,12 +24,12 @@ type Store struct {
 }
 
 type Ingredient struct {
-	RecipeID      int    `json:"id"` // ID ingredient belongs to
-	IngredientId  int    `json:"ingredient_id"`
-	Name          string `json:"name"`
-	Amount        int    `json:"amount"`
-	Specifier     string `json:"specifier"`
-	CurrentAmount string `json:"current_amount"` // "high", "medium", "low"
+	RecipeID      int     `json:"id"` // ID ingredient belongs to
+	IngredientId  int     `json:"ingredient_id"`
+	Name          string  `json:"name"`
+	Amount        int     `json:"amount"`
+	Specifier     string  `json:"specifier"`
+	CurrentAmount *string `json:"current_amount"` // "high", "medium", "low"
 }
 
 type UpdateIng struct {

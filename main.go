@@ -26,7 +26,7 @@ var store = c.NewStore()
 func addCorsHeader(res http.ResponseWriter) {
 	headers := res.Header()
 	headers.Add("Access-Control-Allow-Origin", "*")
-	headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+	headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE")
 }
 
 func CorsHandler(next http.Handler) http.Handler {

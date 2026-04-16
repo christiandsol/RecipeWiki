@@ -3,9 +3,10 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/christiandsol/main/errUtil"
 	"io"
 	"net/http"
+
+	"github.com/christiandsol/main/errUtil"
 )
 
 type Response struct {
@@ -30,14 +31,15 @@ func (g *Global) GetIngredients(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("[ERROR] Invalid json sent"))
 		return
 	}
-	recipe, err := FindRecipeByID(g.Conn, body.ID)
+	ingredients, err := FindIngredients(g.Conn, body.ID)
 	if err != nil {
+		fmt.Printf("[ERROR] Unable to find recipe by id, err: %v", err)
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Unable to find recipe by id"))
 		return
 	}
 	response := Response{
-		Ingredients: recipe.Ingredients,
+		Ingredients: ingredients,
 	}
 	res, err := json.Marshal(response)
 	if err != nil {
@@ -46,57 +48,11 @@ func (g *Global) GetIngredients(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Unable to Marshal response"))
 		return
 	}
-	fmt.Printf("res: %v\n", string(res))
+	fmt.Println("Printing stringified response")
+	fmt.Println(string(res))
 	_, err = w.Write(res)
 	if err != nil {
-		fmt.Println("RETURNING 3")
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Unable to write response"))
-		return
-	}
-}
-
-func (s *Store) GetIngredients(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		ID int `json:"id"`
-	}
-	bytesRead, err := io.ReadAll(r.Body)
-	fmt.Printf("Bytes Read: %v\n", string(bytesRead))
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("[ERROR] Unable to read body"))
-		return
-	}
-	err = json.Unmarshal(bytesRead, &body)
-	if err != nil {
-		fmt.Println("RETURNING 1")
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("[ERROR] Invalid json sent"))
-		return
-	}
-	if len(s.Recipes[body.ID].Ingredients) > 0 {
-		fmt.Printf("First ingredient for the body id: %v\n", s.Recipes[body.ID].Ingredients[0].Name)
-	}
-	recipe, _, err := s.FindRecipeByID(body.ID)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Unable to find recipe by id"))
-		return
-	}
-	response := Response{
-		Ingredients: recipe.Ingredients,
-	}
-	res, err := json.Marshal(response)
-	if err != nil {
-		fmt.Println("RETURNING 2")
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Unable to Marshal response"))
-		return
-	}
-	fmt.Printf("res: %v\n", string(res))
-	_, err = w.Write(res)
-	if err != nil {
-		fmt.Println("RETURNING 3")
+		fmt.Println(fmt.Sprintf("[ERROR] Unable to write %v\n", string(res)))
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Unable to write response"))
 		return
@@ -124,7 +80,7 @@ func (g *Global) AddIngredient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = InsertIngredient(g.Conn, ingredient)
+	ingredientId, err := InsertIngredient(g.Conn, ingredient)
 	if err != nil {
 		fmt.Printf("[ERROR] Error inserting ingredient\n")
 		w.WriteHeader(http.StatusBadRequest)
@@ -132,8 +88,16 @@ func (g *Global) AddIngredient(w http.ResponseWriter, r *http.Request) {
 			ingredient.RecipeID)))
 		return
 	}
+	fmt.Printf("Ingredient id generated is: %v", ingredientId)
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Successfully added ingredient"))
+	msg, err := json.Marshal(map[string]any{"id": ingredientId})
+	if err != nil {
+		fmt.Printf("[ERROR] error marshalling ingredientId")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Error martialing from server side"))
+		return
+	}
+	w.Write(msg)
 }
 
 func (g *Global) DeleteIngredient(w http.ResponseWriter, r *http.Request) {
@@ -181,6 +145,11 @@ func (g *Global) UpdateIngredient(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = UpdateIngredient(g.Conn, ingredient)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		io.WriteString(w, "Unable to upate ingredient")
+		return
+	}
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Successfully updated ingredient"))
 }
