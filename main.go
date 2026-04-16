@@ -83,7 +83,7 @@ func main() {
 	if isLocal(os.Args) {
 		host = "localhost"
 	} else {
-		host = "postgresdb"
+		host = "db"
 	}
 	file, err := os.Open(".env")
 	if err != nil {
@@ -151,7 +151,6 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", c.Home)
 	mux.HandleFunc("POST /ingredients", global.GetIngredients)
 	mux.HandleFunc("POST /ingredient", global.AddIngredient)
 	mux.HandleFunc("DELETE /ingredient", global.DeleteIngredient)
@@ -159,6 +158,7 @@ func main() {
 	mux.HandleFunc("GET /recipes", global.GetRecipes)
 	mux.HandleFunc("POST /recipe", global.AddRecipe)
 	mux.HandleFunc("DELETE /recipe", global.DeleteRecipe)
+	mux.Handle("/", http.FileServer(http.Dir("./frontend/build")))
 	// mux.HandleFunc("GET /recipe", store.GetRecipe)
 	err = http.ListenAndServe("0.0.0.0:8080", CorsHandler(mux))
 	errUtil.CheckErr("Error Starting server", nil, err)
