@@ -1,18 +1,37 @@
 <script lang="ts">
 	import "./recipe.css";
+	import { PUBLIC_SERVER_URL, PUBLIC_SERVER_PORT } from "$env/static/public";
 	import {
 		type Ingredients,
 		type Response,
 		type IngredientRes,
 	} from "$lib/types";
 	import { PUBLIC_URL } from "$env/static/public";
+	const SERVER_URL = `${PUBLIC_SERVER_URL}:${PUBLIC_SERVER_PORT}`;
+	const FALLBACK =
+		"https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=400&q=80";
+
 	let { data: props } = $props();
 	console.log(`id passed: ${props.id}`);
 	let listIngredients: Array<IngredientRes & { priority?: string }> = $state(
 		[],
 	);
 	let openDropdown: string | null = $state(null);
+	// get recipe image
+	let recipe = $state(null);
 
+	$effect(() => {
+		const getRecipe = async () => {
+			const response = await fetch(`${SERVER_URL}/recipe/${props.id}`, {
+				method: "GET",
+			});
+			const data = await response.json();
+			recipe = data;
+		};
+		getRecipe();
+	});
+
+	// get ingredients
 	$effect(() => {
 		const send = async () => {
 			const response = await fetch(`${PUBLIC_URL}/ingredients`, {
@@ -125,11 +144,61 @@
 
 	const getPriority = (value: string) =>
 		priorities.find((p) => p.value === value) ?? priorities[3];
+
+	const updateRecipe = async (
+		field: "name" | "description",
+		value: string,
+	) => {
+		console.log("Sending PATCH to", `${SERVER_URL}/recipe`);
+		const response = await fetch(`${SERVER_URL}/recipe`, {
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				id: recipe.id,
+				name: recipe.name,
+				description: recipe.description,
+				[field]: value, // override whichever field changed
+			}),
+		});
+
+		if (!response.ok) {
+			console.error("[ERROR] Failed to update recipe");
+			return;
+		}
+
+		recipe = { ...recipe, [field]: value };
+	};
 </script>
 
 <svelte:window onclick={closeAllDropdowns} />
 
 <main class="page">
+	{#if recipe}
+		<div class="recipe-hero">
+			<img
+				class="recipe-hero-img"
+				src={recipe.image_url
+					? `${SERVER_URL}/images/${recipe.image_url}`
+					: FALLBACK}
+				alt={recipe.name}
+			/>
+		</div>
+		<div class="recipe-caption">
+			<textarea
+				class="recipe-caption-name-input"
+				value={recipe.name}
+				onblur={(e) => updateRecipe("name", e.target.value)}
+				rows="1"
+			/>
+			<!-- swap this for an input later when you add edit mode -->
+			<textarea
+				class="recipe-caption-desc-input"
+				value={recipe.description}
+				onblur={(e) => updateRecipe("description", e.target.value)}
+				rows="2"
+			/>
+		</div>
+	{/if}
 	<section class="form-section">
 		<h2 class="section-title">Add Ingredient</h2>
 		<form class="ingredient-form" onsubmit={addIngredient}>

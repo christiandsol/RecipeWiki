@@ -8,40 +8,78 @@
 		PUBLIC_URL,
 	} from "$env/static/public";
 
+	// URL
+	const SERVER_URL = `${PUBLIC_SERVER_URL}:${PUBLIC_SERVER_PORT}`;
+
+	//Data Model
 	let listRecipes: Array<{
 		id: number;
 		name: string | undefined;
 		description: string | undefined;
+		image_url: string | undefined;
 	}> = $state([]);
-	const URL = `${PUBLIC_SERVER_URL}:${PUBLIC_SERVER_PORT}`;
-	console.log(`URL: ${URL}`);
 
+	// Image upload state
+	let previewUrl: string | null = $state(null);
+	let isDragging = $state(false);
+	let fileInput: HTMLInputElement;
+	const FALLBACK =
+		"https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=400&q=80";
+	const imageUrl = (filename: string | undefined) =>
+		filename ? `${SERVER_URL}/images/${filename}` : FALLBACK;
+
+	// Get recipes from server on mount
 	$effect(() => {
 		const getRecipes = async () => {
-			const response = await fetch(`${URL}/recipes`, { method: "GET" });
+			const response = await fetch(`${SERVER_URL}/recipes`, {
+				method: "GET",
+			});
 			const data: Recipes = await response.json();
-			console.log(`recipes: ${data}`);
 			listRecipes = data.recipes.map((item: RecipeRes) => ({
 				id: item.id,
 				name: item.name,
 				description: item.description,
+				image_url: item.image_url,
 			}));
 		};
 		getRecipes();
 	});
 
+	const onFileChange = async (img: File | null | undefined) => {
+		if (!img) return;
+		previewUrl = URL.createObjectURL(img);
+		// const formData = new FormData();
+		// formData.append("image", img);
+		// const res = await fetch(`${SERVER_URL}/upload`, {
+		// 	method: "POST",
+		// 	body: formData,
+		// });
+		// const data = await res.json();
+		// console.log(data);
+	};
+
+	const onDrop = (e: DragEvent) => {
+		e.preventDefault();
+		isDragging = false;
+		const file = e.dataTransfer?.files[0];
+		if (file && file.type.startsWith("image/")) {
+			fileInput.files = e.dataTransfer!.files;
+			onFileChange(file);
+		}
+	};
+
+	const clearImage = () => {
+		previewUrl = null;
+		fileInput.value = "";
+	};
+
 	export const addRecipe = async (e: SubmitEvent) => {
 		e.preventDefault();
 		const formData = new FormData(e.target as HTMLFormElement);
-		const response = await fetch(`${URL}/recipe`, {
+		// Send as multipart — DO NOT JSON.stringify
+		const response = await fetch(`${SERVER_URL}/recipe`, {
 			method: "POST",
-			body: JSON.stringify({
-				name: formData.get("name")?.toString().toLowerCase(),
-				description: formData
-					.get("description")
-					?.toString()
-					.toLowerCase(),
-			}),
+			body: formData,
 		});
 		if (!response.ok) {
 			console.error(
@@ -56,19 +94,18 @@
 					.get("description")
 					?.toString()
 					.toLowerCase(),
+				image_url: data.image_url,
 			});
+			clearImage();
 			goto(`/recipe/${data.id}`);
 		}
 	};
 
-	export const deleteRecipe = async (e: SubmitEvent, recipeId: Number) => {
+	export const deleteRecipe = async (e: MouseEvent, recipeId: number) => {
 		const response = await fetch(`${PUBLIC_URL}/recipe`, {
 			method: "DELETE",
-			body: JSON.stringify({
-				recipe_id: recipeId,
-			}),
+			body: JSON.stringify({ recipe_id: recipeId }),
 		});
-
 		const msg = await response.text();
 		if (response.ok) {
 			listRecipes = listRecipes.filter((r) => r.id !== recipeId);
@@ -111,8 +148,8 @@
 						>
 						<div class="recipe-card-image">
 							<img
-								src="https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=400&q=80"
-								alt="Recipe"
+								src={imageUrl(recipe.image_url)}
+								alt={recipe.name}
 							/>
 						</div>
 						<div class="recipe-card-body">
@@ -151,6 +188,74 @@
 					placeholder="e.g. a moist and sweet loaf"
 				/>
 			</div>
+
+			<!-- Image upload -->
+			<div class="field-group">
+				<label>Photo</label>
+				{#if previewUrl}
+					<div class="upload-preview">
+						<img
+							src={previewUrl}
+							alt="Preview"
+							class="preview-img"
+						/>
+						<button
+							type="button"
+							class="preview-clear"
+							onclick={clearImage}
+							aria-label="Remove image">✕</button
+						>
+					</div>
+				{:else}
+					<div
+						class="upload-zone"
+						class:upload-zone--drag={isDragging}
+						ondragover={(e) => {
+							e.preventDefault();
+							isDragging = true;
+						}}
+						ondragleave={() => (isDragging = false)}
+						ondrop={onDrop}
+						onclick={() => fileInput.click()}
+						role="button"
+						tabindex="0"
+						onkeydown={(e) =>
+							e.key === "Enter" && fileInput.click()}
+					>
+						<svg
+							class="upload-icon"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="1.5"
+						>
+							<path
+								d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
+						</svg>
+						<span class="upload-label"
+							>Drop an image or <span class="upload-link"
+								>browse</span
+							></span
+						>
+						<span class="upload-hint"
+							>PNG, JPG, WEBP · max 5 MB</span
+						>
+					</div>
+				{/if}
+				<input
+					bind:this={fileInput}
+					type="file"
+					name="image"
+					accept="image/*"
+					class="file-input-hidden"
+					onchange={(e) =>
+						onFileChange((e.target as HTMLInputElement).files?.[0])}
+				/>
+			</div>
+
 			<button class="submit-btn" type="submit">Add Recipe</button>
 		</form>
 	</section>

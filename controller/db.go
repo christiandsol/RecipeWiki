@@ -3,10 +3,11 @@ package controller
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func FindIngredients(conn *pgx.Conn, recipeId int) ([]Ingredient, error) {
+func FindIngredients(conn *pgxpool.Pool, recipeId int) ([]Ingredient, error) {
 	var ingredients []Ingredient
 	rows, err := conn.Query(context.Background(),
 		`SELECT id, recipe_id, name, amount, specifier, current_amount FROM ingredients WHERE recipe_id = $1`, recipeId,
@@ -25,11 +26,11 @@ func FindIngredients(conn *pgx.Conn, recipeId int) ([]Ingredient, error) {
 	}
 	return ingredients, nil
 }
-func FindRecipeByID(conn *pgx.Conn, id int) (*Recipe, error) {
+func FindRecipeByID(conn *pgxpool.Pool, id int) (*Recipe, error) {
 	var r Recipe
 	err := conn.QueryRow(context.Background(),
-		`SELECT id, name, description, steps, info FROM recipes WHERE id = $1`, id,
-	).Scan(&r.RecipeID, &r.Name, &r.Description, &r.Steps, &r.Info)
+		`SELECT id, name, description, steps, info, image_path FROM recipes WHERE id = $1`, id,
+	).Scan(&r.RecipeID, &r.Name, &r.Description, &r.Steps, &r.Info, &r.ImagePath)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +56,7 @@ func FindRecipeByID(conn *pgx.Conn, id int) (*Recipe, error) {
 	return &r, nil
 }
 
-func InsertIngredient(conn *pgx.Conn, i Ingredient) (int, error) {
+func InsertIngredient(conn *pgxpool.Pool, i Ingredient) (int, error) {
 	fmt.Println(i)
 	var ingredientID int
 	err := conn.QueryRow(context.Background(),
@@ -68,7 +69,7 @@ func InsertIngredient(conn *pgx.Conn, i Ingredient) (int, error) {
 	return ingredientID, nil
 }
 
-func RemoveIngredient(conn *pgx.Conn, id int) error {
+func RemoveIngredient(conn *pgxpool.Pool, id int) error {
 	_, err := conn.Exec(context.Background(),
 		`DELETE FROM ingredients WHERE id = $1`, id)
 	if err != nil {
@@ -77,7 +78,7 @@ func RemoveIngredient(conn *pgx.Conn, id int) error {
 	return nil
 }
 
-func UpdateIngredient(conn *pgx.Conn, i Ingredient) error {
+func UpdateIngredient(conn *pgxpool.Pool, i Ingredient) error {
 	_, err := conn.Exec(context.Background(), `
 		UPDATE ingredients
 		SET recipe_id      = $2,
@@ -98,7 +99,7 @@ func UpdateIngredient(conn *pgx.Conn, i Ingredient) error {
 	return err
 }
 
-func CreateTables(conn *pgx.Conn) error {
+func CreateTables(conn *pgxpool.Pool) error {
 	_, err := conn.Exec(context.Background(), `
         CREATE TABLE IF NOT EXISTS recipes (
             id          SERIAL PRIMARY KEY,
@@ -120,9 +121,9 @@ func CreateTables(conn *pgx.Conn) error {
 	return err
 }
 
-func QueryRecipes(conn *pgx.Conn) ([]Recipe, error) {
+func QueryRecipes(conn *pgxpool.Pool) ([]Recipe, error) {
 	rows, err := conn.Query(context.Background(),
-		`SELECT id, name, description FROM recipes`)
+		`SELECT id, name, description, image_path FROM recipes`)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +132,7 @@ func QueryRecipes(conn *pgx.Conn) ([]Recipe, error) {
 	var recipes []Recipe
 	for rows.Next() {
 		var r Recipe
-		err := rows.Scan(&r.RecipeID, &r.Name, &r.Description)
+		err := rows.Scan(&r.RecipeID, &r.Name, &r.Description, &r.ImagePath)
 		if err != nil {
 			return nil, err
 		}
@@ -141,13 +142,13 @@ func QueryRecipes(conn *pgx.Conn) ([]Recipe, error) {
 	return recipes, nil
 }
 
-func InsertRecipe(conn *pgx.Conn, r Recipe) (int, error) {
+func InsertRecipe(conn *pgxpool.Pool, r Recipe) (int, error) {
 	// Insert recipe first, get the generated ID back
 	var recipeID int
 	err := conn.QueryRow(context.Background(),
-		`INSERT INTO recipes (name, description, steps, info)
-         VALUES ($1, $2, $3, $4) RETURNING id`,
-		r.Name, r.Description, r.Steps, r.Info,
+		`INSERT INTO recipes (name, description, steps, info, image_path)
+         VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+		r.Name, r.Description, r.Steps, r.Info, r.ImagePath,
 	).Scan(&recipeID)
 	if err != nil {
 		return -1, err
@@ -167,7 +168,7 @@ func InsertRecipe(conn *pgx.Conn, r Recipe) (int, error) {
 	return recipeID, nil
 }
 
-func QueryIngredients(conn *pgx.Conn) ([]Ingredient, error) {
+func QueryIngredients(conn *pgxpool.Pool) ([]Ingredient, error) {
 	rows, err := conn.Query(context.Background(),
 		`SELECT id, name, amount, specifier FROM ingredients`)
 	if err != nil {
@@ -188,11 +189,30 @@ func QueryIngredients(conn *pgx.Conn) ([]Ingredient, error) {
 	return ingredients, nil
 }
 
-func RemoveRecipe(conn *pgx.Conn, recipeId int) error {
+func RemoveRecipe(conn *pgxpool.Pool, recipeId int) error {
 	_, err := conn.Exec(context.Background(),
 		`DELETE FROM recipes WHERE id = $1`, recipeId)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func NewImage(conn *pgxpool.Pool, recipeId int) error {
+	_, err := conn.Exec(context.Background(),
+		`INSERT INTO recipes `)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func PatchRecipe(conn *pgxpool.Pool, r Recipe) error {
+	_, err := conn.Exec(context.Background(), `
+        UPDATE recipes
+        SET name        = $2,
+            description = $3
+        WHERE id = $1
+    `, r.RecipeID, r.Name, r.Description)
+	return err
 }

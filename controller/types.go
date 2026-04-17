@@ -1,8 +1,9 @@
 package controller
 
 import (
-	"github.com/jackc/pgx/v5"
 	"sync"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func NewStore() *Store {
@@ -12,7 +13,8 @@ func NewStore() *Store {
 }
 
 type Global struct {
-	Conn *pgx.Conn
+	Conn   *pgxpool.Pool
+	ImgDir string
 }
 
 type Store struct {
@@ -45,10 +47,11 @@ type DeleteIngredient struct {
 }
 
 type Recipe struct {
-	Name        string       `json:"name"`
 	RecipeID    int          `json:"id"`
+	Name        string       `json:"name"`
 	Description string       `json:"description"`
-	Ingredients []Ingredient `json:"ingredients"`
+	ImagePath   string       `json:"image_url"`
 	Steps       []string     `json:"steps"`
 	Info        []string     `json:"info"`
+	Ingredients []Ingredient `json:"ingredients"`
 }

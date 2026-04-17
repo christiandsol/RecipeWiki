@@ -2,6 +2,7 @@ export type RecipeRes = {
 	name: string;
 	description: string;
 	id: number;
+	image_url: string | undefined;
 };
 export type Recipes = {
 	recipes: Array<RecipeRes>;
@@ -9,6 +10,7 @@ export type Recipes = {
 
 export type Response = {
 	id: number;
+	image_url: string | undefined;
 };
 
 export type IngredientRes = {

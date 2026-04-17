@@ -3,6 +3,12 @@ package controller
 import (
 	"errors"
 	"fmt"
+	"io"
+	"mime/multipart"
+	"net/http"
+	"os"
+	"path/filepath"
+	"time"
 )
 
 /* ============DEBUG============*/
@@ -82,4 +88,53 @@ func (s *Store) FindIngredientByName(name string, ingredients []Ingredient) (int
 		}
 	}
 	return idx, fmt.Errorf("Unable to find ingredients with name: %v", name)
+}
+
+// A little bit about implementation
+// http.DetectContentType uses magic bytes and doesn't recognise HEIC,
+// must sniff manually, HEIC files have "ftyp" at byte 4 and
+// "heic"/"heix"/"hevc" etc. at byte 8.
+func detectHEIC(data []byte) (string, bool) {
+	if len(data) < 12 {
+		return "", false
+	}
+	if string(data[4:8]) != "ftyp" {
+		return "", false
+	}
+	brand := string(data[8:12])
+	heicBrands := map[string]bool{
+		"heic": true, "heix": true, "hevc": true,
+		"hevx": true, "heim": true, "hevm": true,
+		"mif1": true, // also used by HEIF
+	}
+	if heicBrands[brand] {
+		return ".heic", true
+	}
+	return "", false
+}
+
+// saveImage is now a plain helper, not an HTTP handler
+func (g *Global) saveImage(file multipart.File) (string, error) {
+	image, err := io.ReadAll(file)
+	if err != nil {
+		return "", fmt.Errorf("[ERROR] Unable to read file: %w", err)
+	}
+
+	mimeType := http.DetectContentType(image)
+	ext, ok := allowedTypes[mimeType]
+	if !ok {
+		ext, ok = detectHEIC(image)
+		if !ok {
+			return "", fmt.Errorf("[ERROR] Unsupported image type: %s", mimeType)
+		}
+	}
+
+	filename := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext)
+	fullPath := filepath.Join(g.ImgDir, filename)
+
+	if err := os.WriteFile(fullPath, image, 0644); err != nil {
+		return "", fmt.Errorf("[ERROR] Unable to save image: %w", err)
+	}
+
+	return filename, nil
 }

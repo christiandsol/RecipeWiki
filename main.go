@@ -4,85 +4,13 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	c "github.com/christiandsol/main/controller"
-	"github.com/christiandsol/main/errUtil"
-	"github.com/jackc/pgx/v5"
 	"net/http"
 	"os"
+
+	c "github.com/christiandsol/main/controller"
+	"github.com/christiandsol/main/errUtil"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
-
-type Env struct {
-	POSTGRES_PASSWORD string
-	POSTGRES_USER     string
-	POSTGRES_DB       string
-	POSTGRES_PORT     string
-	POSTGRES_DATA     string
-	POSTGRES_VERSION  string
-}
-
-// =========================GLOBALS==============================
-var store = c.NewStore()
-
-func addCorsHeader(res http.ResponseWriter) {
-	headers := res.Header()
-	headers.Add("Access-Control-Allow-Origin", "*")
-	headers.Add("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE, PATCH")
-	headers.Set("Access-Control-Allow-Headers", "Content-Type")
-
-}
-
-func CorsHandler(next http.Handler) http.Handler {
-	return http.HandlerFunc(
-		func(res http.ResponseWriter, req *http.Request) {
-			addCorsHeader(res)
-			if req.Method == http.MethodOptions {
-				res.WriteHeader(http.StatusNoContent)
-				return
-			}
-			next.ServeHTTP(res, req)
-		},
-	)
-}
-
-func isLocal(args []string) bool {
-	// fmt.Printf("OS args[0]: %v", args)
-	hasArg := false
-	for _, arg := range args {
-		if arg == "--help" {
-			fmt.Printf("\t--help: get information\n")
-			fmt.Printf("\t--local: develop local (default)\n")
-			fmt.Printf("\t--cloud: run cloud\n")
-			hasArg = true
-		} else if arg == "--cloud" {
-			fmt.Printf("\t Running via cloud")
-			hasArg = true
-			return false
-		}
-	}
-	if hasArg == false {
-		fmt.Printf("\t--help: get information\n")
-		fmt.Println()
-	}
-	return true
-}
-
-func parseToEqual(str string) (string, string) {
-	key := ""
-	value := ""
-	hitEquals := false
-	for i := range str {
-		if string(str[i]) == "=" {
-			hitEquals = true
-			continue
-		}
-		if !hitEquals {
-			key += string(str[i])
-		} else {
-			value += string(str[i])
-		}
-	}
-	return key, value
-}
 
 func main() {
 	var host string
@@ -115,6 +43,8 @@ func main() {
 			envs.POSTGRES_DATA = value
 		case "POSTGRES_VERSION":
 			envs.POSTGRES_VERSION = value
+		case "IMAGE_DIR":
+			envs.IMAGE_DIR = value
 		default:
 			fmt.Println("Unknown input")
 		}
@@ -132,17 +62,34 @@ func main() {
 		envs.POSTGRES_DB,
 	)
 	fmt.Printf("Attemping to connect to URI: %v\n", URI)
-	conn, err := pgx.Connect(context.Background(), URI)
+	pool, err := pgxpool.New(context.Background(), URI)
 	if err != nil {
 		fmt.Printf("Unable to connect:%v", err)
 		return
 	}
+	defer pool.Close()
+
+	imgDirExists, err := exists(envs.IMAGE_DIR)
+	if err != nil {
+		fmt.Printf("[ERROR] Error opening image: %v", err)
+		return
+	}
+	if !imgDirExists {
+		fmt.Printf("Image directory doesn't exist, creating %v ...\n", envs.IMAGE_DIR)
+		err := os.MkdirAll(envs.IMAGE_DIR, 0755)
+		if err != nil {
+			fmt.Printf("[ERROR] Error making directory: %v", err)
+			return
+		}
+	}
+	fmt.Println("Successfully Created Image directory")
 
 	global := c.Global{
-		Conn: conn,
+		Conn:   pool,
+		ImgDir: envs.IMAGE_DIR,
 	}
 
-	defer conn.Close(context.Background())
+	defer pool.Close()
 	fmt.Println("Connected!")
 
 	err = file.Close()
@@ -151,9 +98,13 @@ func main() {
 		return
 	}
 
-	err = c.CreateTables(conn)
+	err = c.RunMigrations(pool)
 	if err != nil {
-		fmt.Printf("Unable to create tables %v", err)
+		fmt.Println("Unable to migrate:", err)
+		return
+	}
+	if err != nil {
+		fmt.Printf("Unable to migrate %v", err)
 	}
 
 	mux := http.NewServeMux()
@@ -163,9 +114,13 @@ func main() {
 	mux.HandleFunc("PATCH /ingredient", global.UpdateIngredient)
 	mux.HandleFunc("GET /recipes", global.GetRecipes)
 	mux.HandleFunc("POST /recipe", global.AddRecipe)
+	mux.HandleFunc("PATCH /recipe", global.UpdateRecipe)
 	mux.HandleFunc("DELETE /recipe", global.DeleteRecipe)
+	mux.HandleFunc("POST /upload", global.UploadImage)
+	mux.HandleFunc("GET /recipe/{id}", global.GetRecipe)
 	mux.Handle("/", http.FileServer(http.Dir("./frontend/build")))
-	// mux.HandleFunc("GET /recipe", store.GetRecipe)
+	// Image server
+	mux.Handle("/images/", http.StripPrefix("/images/", http.FileServer(http.Dir(global.ImgDir))))
 	err = http.ListenAndServe("0.0.0.0:8080", CorsHandler(mux))
 	errUtil.CheckErr("Error Starting server", nil, err)
 }
