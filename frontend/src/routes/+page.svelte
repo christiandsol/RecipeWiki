@@ -183,6 +183,16 @@
 			</div>
 
 			<!-- Image upload -->
+			<input
+				bind:this={fileInput}
+				type="file"
+				name="image"
+				accept="image/*"
+				class="file-input-hidden"
+				onchange={(e) =>
+					onFileChange((e.target as HTMLInputElement).files?.[0])}
+			/>
+
 			<div class="field-group">
 				<label>Photo</label>
 				{#if previewUrl}

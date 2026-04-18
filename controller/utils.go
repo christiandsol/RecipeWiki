@@ -138,3 +138,8 @@ func (g *Global) saveImage(file multipart.File) (string, error) {
 
 	return filename, nil
 }
+
+func (g *Global) removeImage(fileName string) error {
+	err := os.Remove(filepath.Join(g.ImgDir, fileName))
+	return err
+}

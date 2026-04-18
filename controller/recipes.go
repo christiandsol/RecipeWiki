@@ -123,11 +123,19 @@ func (g *Global) DeleteRecipe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = RemoveRecipe(g.Conn, deleteRec.RecipeId)
+	fileName, err := RemoveRecipe(g.Conn, deleteRec.RecipeId)
 	if err != nil {
 		fmt.Printf("[ERROR] Unable to remove recipe", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(`[ERROR] Unable to remove recipe`))
+		return
+	}
+
+	err = g.removeImage(fileName)
+	if err != nil {
+		fmt.Printf("[ERROR] Unable to remove file image", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`[ERROR] Unable to remove file image`))
 		return
 	}
 

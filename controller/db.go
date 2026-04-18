@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -188,13 +189,22 @@ func QueryIngredients(conn *pgxpool.Pool) ([]Ingredient, error) {
 	return ingredients, nil
 }
 
-func RemoveRecipe(conn *pgxpool.Pool, recipeId int) error {
-	_, err := conn.Exec(context.Background(),
-		`DELETE FROM recipes WHERE id = $1`, recipeId)
+func RemoveRecipe(conn *pgxpool.Pool, recipeId int) (string, error) {
+	var fileName string
+
+	err := conn.QueryRow(
+		context.Background(),
+		`DELETE FROM recipes
+		 WHERE id = $1
+		 RETURNING image_path`,
+		recipeId,
+	).Scan(&fileName)
+
 	if err != nil {
-		return err
+		return "", err
 	}
-	return nil
+
+	return fileName, nil
 }
 
 func NewImage(conn *pgxpool.Pool, recipeId int) error {
