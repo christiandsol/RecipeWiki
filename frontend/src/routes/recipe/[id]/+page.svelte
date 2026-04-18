@@ -78,6 +78,7 @@
 		};
 		getSteps();
 	});
+
 	const updateImage = async (e: SubmitEvent) => {
 		var formData = new FormData(e.target as HTMLFormElement);
 		const response = await fetch(`${SERVER_URL}/recipe`, {
@@ -231,14 +232,15 @@
 			}),
 		});
 		if (response.ok) {
-			const data = await response.json(); // expects { id: number }
-			listSteps.push({ id: data.id, text: draftText.trim() });
+			const data = await response.json();
+			listSteps.push({ id: data.step_id, text: draftText.trim() });
 			draftText = "";
 			addingStep = false;
 		}
 	};
 
 	const updateStep = async (step: { id: number; text: string }) => {
+		console.log(`Editing text: ${editingText}`);
 		if (!editingText.trim()) return;
 		const response = await fetch(`${SERVER_URL}/step`, {
 			method: "PATCH",

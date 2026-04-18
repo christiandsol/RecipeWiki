@@ -59,7 +59,8 @@ func (g *Global) AddStep(w http.ResponseWriter, r *http.Request) {
 func (g *Global) UpdateStep(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("[DEBUG] Updating Step")
 	type StepJSON struct {
-		step string
+		StepID   int    `json:"id"`
+		StepText string `json:"text"`
 	}
 	var stepJSON StepJSON
 	bytesRead, err := io.ReadAll(r.Body)
@@ -76,7 +77,15 @@ func (g *Global) UpdateStep(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("[ERROR] Check JSON"))
 		return
 	}
-
+	err = UpdateStepText(g.Conn, stepJSON.StepID, stepJSON.StepText)
+	if err != nil {
+		fmt.Printf("[ERROR] Unable to update step text\n")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("[ERROR] Check JSON"))
+		return
+	}
+	fmt.Println("SUCCESS")
+	w.WriteHeader(http.StatusOK)
 }
 
 func (g *Global) GetSteps(w http.ResponseWriter, r *http.Request) {
