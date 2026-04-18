@@ -174,6 +174,20 @@ func (g *Global) UpdateRecipe(w http.ResponseWriter, r *http.Request) {
 			}
 			recipe.ImagePath = filename
 		}
+
+		oldRecipe, err := FindRecipeByID(g.Conn, recipe.RecipeID)
+		if err != nil {
+			fmt.Printf("[ERROR] Unable to find original recipe %v\n", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		err = g.removeImage(oldRecipe.ImagePath)
+		if err != nil {
+			fmt.Printf("[ERROR] Unable to remove old image%v\n", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	} else {
 		// JSON path (name/description only)
 		body, err := io.ReadAll(r.Body)
