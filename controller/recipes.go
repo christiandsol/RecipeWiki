@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strconv"
-	"time"
+	"strings"
 )
 
 func (g *Global) GetRecipe(w http.ResponseWriter, r *http.Request) {
@@ -139,16 +137,46 @@ func (g *Global) DeleteRecipe(w http.ResponseWriter, r *http.Request) {
 
 func (g *Global) UpdateRecipe(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("[DEBUG] Update recipe")
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "[ERROR] Unable to read body", http.StatusBadRequest)
-		return
-	}
-
 	var recipe Recipe
-	if err := json.Unmarshal(body, &recipe); err != nil {
-		http.Error(w, "[ERROR] Unable to unmarshal body", http.StatusBadRequest)
-		return
+
+	if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
+		// Image upload path
+		if err := r.ParseMultipartForm(20 << 20); err != nil {
+			http.Error(w, "[ERROR] Failed to parse form", http.StatusBadRequest)
+			return
+		}
+
+		idStr := r.FormValue("id")
+		id, err := strconv.Atoi(idStr)
+		if err != nil {
+			http.Error(w, "[ERROR] Invalid id", http.StatusBadRequest)
+			return
+		}
+		recipe.RecipeID = id
+		recipe.Name = r.FormValue("name")
+		recipe.Description = r.FormValue("description")
+
+		file, _, err := r.FormFile("image")
+		if err == nil {
+			defer file.Close()
+			filename, err := g.saveImage(file)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusUnsupportedMediaType)
+				return
+			}
+			recipe.ImagePath = filename
+		}
+	} else {
+		// JSON path (name/description only)
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "[ERROR] Unable to read body", http.StatusBadRequest)
+			return
+		}
+		if err := json.Unmarshal(body, &recipe); err != nil {
+			http.Error(w, "[ERROR] Unable to unmarshal body", http.StatusBadRequest)
+			return
+		}
 	}
 
 	if err := PatchRecipe(g.Conn, recipe); err != nil {
@@ -156,7 +184,6 @@ func (g *Global) UpdateRecipe(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "[ERROR] Unable to update recipe", http.StatusInternalServerError)
 		return
 	}
-
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(`{"message": "updated"}`))
 }
@@ -167,51 +194,4 @@ var allowedTypes = map[string]string{
 	"image/heic": ".heic",
 	"image/heif": ".heif", // HEIC is a container, HEIF is the format — iPhones use both
 	"image/webp": ".webp", // common from web browsers
-}
-
-func (g *Global) UploadImage(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("[DEBUG] Upload image")
-
-	if err := r.ParseMultipartForm(20 << 20); err != nil {
-		http.Error(w, "[ERROR] Failed to parse form", http.StatusBadRequest)
-		return
-	}
-
-	file, _, err := r.FormFile("image")
-	if err != nil {
-		http.Error(w, "[ERROR] Missing image field", http.StatusBadRequest)
-		return
-	}
-	defer file.Close()
-
-	image, err := io.ReadAll(file)
-	if err != nil {
-		http.Error(w, "[ERROR] Unable to read file", http.StatusBadRequest)
-		return
-	}
-	fmt.Printf("Size of body read: %v\n", len(image))
-
-	mimeType := http.DetectContentType(image)
-	ext, ok := allowedTypes[mimeType]
-	if !ok {
-		// http.DetectContentType doesn't know HEIC, handle below
-		ext, ok = detectHEIC(image)
-		if !ok {
-			fmt.Printf("[ERROR] Unsupported image type: %s", mimeType)
-			http.Error(w, fmt.Sprintf("[ERROR] Unsupported image type: %s", mimeType), http.StatusUnsupportedMediaType)
-			return
-		}
-	}
-
-	filename := fmt.Sprintf("%v.%v", time.Now().UnixNano(), ext)
-	filepath := filepath.Join(g.ImgDir, filename)
-	if err := os.WriteFile(filepath, image, 0644); err != nil {
-		fmt.Printf("[ERROR] Unable to save image, err: %v", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(fmt.Sprintf("[ERROR] Unable to save image, err: %v", err)))
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf(`{"path": "%s"}`, filename)))
 }

@@ -108,16 +108,22 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
+	//ingredients
 	mux.HandleFunc("POST /ingredients", global.GetIngredients)
 	mux.HandleFunc("POST /ingredient", global.AddIngredient)
 	mux.HandleFunc("DELETE /ingredient", global.DeleteIngredient)
 	mux.HandleFunc("PATCH /ingredient", global.UpdateIngredient)
+	// recipes
 	mux.HandleFunc("GET /recipes", global.GetRecipes)
 	mux.HandleFunc("POST /recipe", global.AddRecipe)
 	mux.HandleFunc("PATCH /recipe", global.UpdateRecipe)
 	mux.HandleFunc("DELETE /recipe", global.DeleteRecipe)
-	mux.HandleFunc("POST /upload", global.UploadImage)
 	mux.HandleFunc("GET /recipe/{id}", global.GetRecipe)
+	//steps
+	mux.HandleFunc("GET /steps/{id}", global.GetSteps)
+	mux.HandleFunc("POST /step", global.AddStep)
+	mux.HandleFunc("DELETE /step", global.DeleteStep)
+	mux.HandleFunc("PATCH /step", global.UpdateStep)
 	mux.Handle("/", http.FileServer(http.Dir("./frontend/build")))
 	// Image server
 	mux.Handle("/images/", http.StripPrefix("/images/", http.FileServer(http.Dir(global.ImgDir))))

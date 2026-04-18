@@ -763,3 +763,82 @@ input::placeholder {
         max-width: 100%;
     }
 }
+
+
+/* ── Step inline edit ── */
+.step-edit-input {
+    width: 100%;
+    font-size: 0.92rem;
+    font-family: inherit;
+    color: #1a1a1a;
+    line-height: 1.6;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 0.55rem 0.75rem;
+    background: #f9f9f9;
+    resize: vertical;
+    box-sizing: border-box;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    outline: none;
+    margin-bottom: 0.6rem;
+}
+
+.step-edit-input:focus {
+    border-color: #c0c0c0;
+    box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.04);
+    background: #fff;
+}
+
+.step-edit-input::placeholder {
+    color: #ccc;
+}
+
+.step-draft-actions {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.step-confirm-btn {
+    padding: 0.3rem 0.85rem;
+    background: #1a1a1a;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s;
+}
+
+.step-confirm-btn:hover {
+    background: #333;
+}
+
+.step-cancel-btn {
+    padding: 0.3rem 0.85rem;
+    background: transparent;
+    color: #999;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 0.12s, color 0.12s;
+}
+
+.step-cancel-btn:hover {
+    border-color: #aaa;
+    color: #555;
+}
+
+.step-item--draft {
+    padding-top: 1.1rem;
+    border-top: 1px solid #f0f0f0;
+}
+
+.step-number--draft {
+    background: #e0e0e0;
+    color: #999;
+}

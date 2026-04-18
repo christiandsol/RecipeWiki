@@ -16,6 +16,10 @@
 	let { data: props } = $props();
 	let listSteps: Array<{ id: number; text: string }> = $state([]);
 	let heroPreviewUrl: string | null = $state(null);
+	let draftText: string = $state("");
+	let addingStep: boolean = $state(false);
+	let editingStepId: number | null = $state(null);
+	let editingText: string = $state("");
 
 	console.log(`id passed: ${props.id}`);
 	let listIngredients: Array<IngredientRes & { priority?: string }> = $state(
@@ -58,6 +62,22 @@
 		send();
 	});
 
+	$effect(() => {
+		const getSteps = async () => {
+			const response = await fetch(`${SERVER_URL}/steps/${props.id}`);
+			if (!response.ok) return;
+			const data = await response.json();
+			if (data.steps != null) {
+				listSteps = data.steps.map(
+					(s: { step_id: number; step_text: string }) => ({
+						id: s.step_id,
+						text: s.step_text,
+					}),
+				);
+			}
+		};
+		getSteps();
+	});
 	const updateImage = async (e: SubmitEvent) => {
 		var formData = new FormData(e.target as HTMLFormElement);
 		const response = await fetch(`${SERVER_URL}/recipe`, {
@@ -200,8 +220,48 @@
 		}
 	};
 
-	const addStep = async (e: Event) => {
-		console.log("ADDING STEP");
+	const addStep = async () => {
+		if (!draftText.trim()) return;
+		const response = await fetch(`${SERVER_URL}/step`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				recipe_id: props.id,
+				step_text: draftText.trim(),
+			}),
+		});
+		if (response.ok) {
+			const data = await response.json(); // expects { id: number }
+			listSteps.push({ id: data.id, text: draftText.trim() });
+			draftText = "";
+			addingStep = false;
+		}
+	};
+
+	const updateStep = async (step: { id: number; text: string }) => {
+		if (!editingText.trim()) return;
+		const response = await fetch(`${SERVER_URL}/step`, {
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ id: step.id, text: editingText.trim() }),
+		});
+		if (response.ok) {
+			listSteps = listSteps.map((s) =>
+				s.id === step.id ? { ...s, text: editingText.trim() } : s,
+			);
+			editingStepId = null;
+		}
+	};
+
+	const deleteStep = async (stepId: number) => {
+		const response = await fetch(`${SERVER_URL}/step`, {
+			method: "DELETE",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ id: stepId }),
+		});
+		if (response.ok) {
+			listSteps = listSteps.filter((s) => s.id !== stepId);
+		}
 	};
 </script>
 
@@ -477,9 +537,10 @@
 				<h2 class="section-title">Steps</h2>
 				<button
 					class="add-step-btn"
-					onclick={(e) => {
-						addStep(e);
+					onclick={() => {
+						addingStep = true;
 					}}
+					disabled={addingStep}
 				>
 					<svg
 						viewBox="0 0 16 16"
@@ -493,7 +554,7 @@
 				</button>
 			</div>
 
-			{#if listSteps.length === 0}
+			{#if listSteps.length === 0 && !addingStep}
 				<div class="steps-empty">
 					<div class="steps-empty-icon">
 						<svg
@@ -520,18 +581,96 @@
 						<li class="step-item">
 							<div class="step-number">{i + 1}</div>
 							<div class="step-body">
-								<p class="step-text">{step.text}</p>
-								<div class="step-actions">
-									<button class="step-action-btn">Edit</button
+								{#if editingStepId === step.id}
+									<textarea
+										class="step-edit-input"
+										bind:value={editingText}
+										rows="3"
+										onkeydown={(e) => {
+											if (
+												e.key === "Enter" &&
+												!e.shiftKey
+											) {
+												e.preventDefault();
+												updateStep(step);
+											}
+											if (e.key === "Escape")
+												editingStepId = null;
+										}}
+									/>
+									<div class="step-draft-actions">
+										<button
+											class="step-confirm-btn"
+											onclick={() => updateStep(step)}
+											>Save</button
+										>
+										<button
+											class="step-cancel-btn"
+											onclick={() =>
+												(editingStepId = null)}
+											>Cancel</button
+										>
+									</div>
+								{:else}
+									<p class="step-text">{step.text}</p>
+									<div class="step-actions">
+										<button
+											class="step-action-btn"
+											onclick={() => {
+												editingStepId = step.id;
+												editingText = step.text;
+											}}>Edit</button
+										>
+										<button
+											class="step-action-btn step-action-btn--danger"
+											onclick={() => deleteStep(step.id)}
+											>Remove</button
+										>
+									</div>
+								{/if}
+							</div>
+						</li>
+					{/each}
+
+					{#if addingStep}
+						<li class="step-item step-item--draft">
+							<div class="step-number step-number--draft">
+								{listSteps.length + 1}
+							</div>
+							<div class="step-body">
+								<textarea
+									class="step-edit-input"
+									bind:value={draftText}
+									rows="3"
+									placeholder="Describe this step…"
+									autofocus
+									onkeydown={(e) => {
+										if (e.key === "Enter" && !e.shiftKey) {
+											e.preventDefault();
+											addStep();
+										}
+										if (e.key === "Escape") {
+											addingStep = false;
+											draftText = "";
+										}
+									}}
+								/>
+								<div class="step-draft-actions">
+									<button
+										class="step-confirm-btn"
+										onclick={addStep}>Add</button
 									>
 									<button
-										class="step-action-btn step-action-btn--danger"
-										>Remove</button
+										class="step-cancel-btn"
+										onclick={() => {
+											addingStep = false;
+											draftText = "";
+										}}>Cancel</button
 									>
 								</div>
 							</div>
 						</li>
-					{/each}
+					{/if}
 				</ol>
 			{/if}
 		</section>

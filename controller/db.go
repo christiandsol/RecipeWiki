@@ -208,10 +208,89 @@ func NewImage(conn *pgxpool.Pool, recipeId int) error {
 
 func PatchRecipe(conn *pgxpool.Pool, r Recipe) error {
 	_, err := conn.Exec(context.Background(), `
-        UPDATE recipes
-        SET name        = $2,
-            description = $3
-        WHERE id = $1
-    `, r.RecipeID, r.Name, r.Description)
+		UPDATE recipes SET
+			name = $1,
+			description = $2,
+			image_path = CASE WHEN $3 = '' THEN image_path ELSE $3 END
+		WHERE id = $4
+    `, r.Name, r.Description, r.ImagePath, r.RecipeID)
 	return err
+}
+
+func InsertStep(conn *pgxpool.Pool, recipeID int, text string) (int, error) {
+	var stepID int
+	err := conn.QueryRow(context.Background(),
+		`INSERT INTO steps (recipe_id, step_number, step_text)
+         VALUES ($1, COALESCE((SELECT MAX(step_number) FROM steps WHERE recipe_id = $1), 0) + 1, $2)
+         RETURNING step_id`,
+		recipeID, text,
+	).Scan(&stepID)
+	return stepID, err
+}
+
+func UpdateStepText(conn *pgxpool.Pool, stepID int, text string) error {
+	_, err := conn.Exec(context.Background(),
+		`UPDATE steps SET step_text = $1 WHERE step_id = $2`,
+		text, stepID,
+	)
+	return err
+}
+
+func ReorderStep(conn *pgxpool.Pool, stepID int, before, after float64) error {
+	_, err := conn.Exec(context.Background(),
+		`UPDATE steps SET step_number = $1 WHERE step_id = $2`,
+		(before+after)/2, stepID,
+	)
+	return err
+}
+
+func DeleteStep(conn *pgxpool.Pool, stepID int) error {
+	_, err := conn.Exec(context.Background(),
+		`DELETE FROM steps WHERE step_id = $1`,
+		stepID,
+	)
+	return err
+}
+
+func FindSteps(conn *pgxpool.Pool, recipeID int) ([]Step, error) {
+	rows, err := conn.Query(context.Background(),
+		`SELECT step_id, step_text FROM steps WHERE recipe_id = $1 ORDER BY step_number`,
+		recipeID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var steps []Step
+	for rows.Next() {
+		var s Step
+		if err := rows.Scan(&s.StepID, &s.StepText); err != nil {
+			return nil, err
+		}
+		steps = append(steps, s)
+	}
+	return steps, rows.Err()
+}
+
+func FindStepsByRecipeID(conn *pgxpool.Pool, recipe_id int) ([]Step, error) {
+	// Fetch steps for recipe with recipe_id
+	rows, err := conn.Query(context.Background(),
+		`SELECT step_id, step_number, step_text FROM steps WHERE recipe_id = $1`, recipe_id,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var steps []Step
+	for rows.Next() {
+		var s Step
+		err := rows.Scan(&s.StepID, &s.StepNumber, &s.StepText)
+		if err != nil {
+			return nil, err
+		}
+		steps = append(steps, s)
+	}
+
+	return steps, nil
 }

@@ -55,3 +55,10 @@ type Recipe struct {
 	Info        []string     `json:"info"`
 	Ingredients []Ingredient `json:"ingredients"`
 }
+
+type Step struct {
+	StepID     int     `json:"step_id"`
+	RecipeID   int     `json:"recipe_id"`
+	StepNumber float64 `json:"step_number"`
+	StepText   string  `json:"step_text"`
+}
