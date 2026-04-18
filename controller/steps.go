@@ -30,7 +30,7 @@ func (g *Global) AddStep(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	step_id, err := InsertStep(g.Conn, stepJSON.RecipeID, stepJSON.StepText)
+	step_id, step_number, err := InsertStep(g.Conn, stepJSON.RecipeID, stepJSON.StepText)
 	if err != nil {
 		fmt.Printf("[ERROR] Unable to insert step: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -38,7 +38,8 @@ func (g *Global) AddStep(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	data, err := json.Marshal(map[string]interface{}{
-		"step_id": step_id,
+		"step_id":     step_id,
+		"step_number": step_number,
 	})
 	if err != nil {
 		fmt.Printf("[ERROR] Unable to Marshal step")
@@ -99,7 +100,7 @@ func (g *Global) GetSteps(w http.ResponseWriter, r *http.Request) {
 
 	steps, err := FindStepsByRecipeID(g.Conn, recipe_id)
 	if err != nil {
-		fmt.Printf("[ERROR] Unable to Find Steps by Recipe id %v", recipe_id)
+		fmt.Printf("[ERROR] Unable to Find Steps by Recipe id %v\n", recipe_id)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("Unable to find steps for recipe of given id"))
 		return
@@ -150,5 +151,31 @@ func (g *Global) DeleteStep(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.WriteHeader(http.StatusOK)
+}
+
+func (g *Global) ReorderStep(w http.ResponseWriter, r *http.Request) {
+	type ReorderJSON struct {
+		StepID int     `json:"step_id"`
+		Before float64 `json:"before"`
+		After  float64 `json:"after"`
+	}
+	var body ReorderJSON
+	bytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "unable to read body", http.StatusInternalServerError)
+		return
+	}
+	err = json.Unmarshal(bytes, &body)
+	if err != nil {
+		http.Error(w, "invalid JSON", http.StatusBadRequest)
+		return
+	}
+	err = ReorderStepDB(g.Conn, body.StepID, body.Before, body.After)
+	if err != nil {
+		fmt.Printf("[ERROR] Unable to reorder step %v: %v\n", body.StepID, err)
+		http.Error(w, "unable to reorder step", http.StatusInternalServerError)
+		return
+	}
 	w.WriteHeader(http.StatusOK)
 }

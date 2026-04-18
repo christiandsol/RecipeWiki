@@ -123,6 +123,7 @@ func main() {
 	mux.HandleFunc("GET /steps/{id}", global.GetSteps)
 	mux.HandleFunc("POST /step", global.AddStep)
 	mux.HandleFunc("DELETE /step", global.DeleteStep)
+	mux.HandleFunc("PATCH /step/reorder", global.ReorderStep)
 	mux.HandleFunc("PATCH /step", global.UpdateStep)
 	mux.Handle("/", http.FileServer(http.Dir("./frontend/build")))
 	// Image server

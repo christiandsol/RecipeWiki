@@ -14,7 +14,8 @@
 		"https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=400&q=80";
 
 	let { data: props } = $props();
-	let listSteps: Array<{ id: number; text: string }> = $state([]);
+	let listSteps: Array<{ id: number; text: string; stepNumber: number }> =
+		$state([]);
 	let heroPreviewUrl: string | null = $state(null);
 	let draftText: string = $state("");
 	let addingStep: boolean = $state(false);
@@ -28,6 +29,9 @@
 	let openDropdown: string | null = $state(null);
 	// get recipe image
 	let recipe = $state(null);
+
+	let draggedStepId: number | null = $state(null);
+	let dragOverStepId: number | null = $state(null);
 
 	$effect(() => {
 		const getRecipe = async () => {
@@ -72,6 +76,7 @@
 					(s: { step_id: number; step_text: string }) => ({
 						id: s.step_id,
 						text: s.step_text,
+						stepNumber: s.step_number,
 					}),
 				);
 			}
@@ -233,14 +238,17 @@
 		});
 		if (response.ok) {
 			const data = await response.json();
-			listSteps.push({ id: data.step_id, text: draftText.trim() });
+			listSteps.push({
+				id: data.step_id,
+				text: draftText.trim(),
+				stepNumber: data.step_number,
+			});
 			draftText = "";
 			addingStep = false;
 		}
 	};
 
 	const updateStep = async (step: { id: number; text: string }) => {
-		console.log(`Editing text: ${editingText}`);
 		if (!editingText.trim()) return;
 		const response = await fetch(`${SERVER_URL}/step`, {
 			method: "PATCH",
@@ -263,6 +271,21 @@
 		});
 		if (response.ok) {
 			listSteps = listSteps.filter((s) => s.id !== stepId);
+		}
+	};
+
+	const reorderStep = async (
+		stepId: number,
+		before: number,
+		after: number,
+	) => {
+		const response = await fetch(`${SERVER_URL}/step/reorder`, {
+			method: "PATCH",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ step_id: stepId, before, after }),
+		});
+		if (!response.ok) {
+			console.error("[ERROR] Failed to reorder step");
 		}
 	};
 </script>
@@ -580,10 +603,122 @@
 			{:else}
 				<ol class="steps-list">
 					{#each listSteps as step, i}
-						<li class="step-item">
+						<li
+							class="step-item"
+							class:step-item--dragging={draggedStepId ===
+								step.id}
+							class:step-item--dragover={dragOverStepId ===
+								step.id}
+							draggable="true"
+							ondragstart={() => {
+								draggedStepId = step.id;
+							}}
+							ondragend={() => {
+								draggedStepId = null;
+								dragOverStepId = null;
+							}}
+							ondragover={(e) => {
+								e.preventDefault();
+								if (draggedStepId !== step.id)
+									dragOverStepId = step.id;
+							}}
+							ondragleave={() => {
+								if (dragOverStepId === step.id)
+									dragOverStepId = null;
+							}}
+							ondrop={(e) => {
+								e.preventDefault();
+								if (
+									draggedStepId === null ||
+									draggedStepId === step.id
+								)
+									return;
+
+								const fromIndex = listSteps.findIndex(
+									(s) => s.id === draggedStepId,
+								);
+								const toIndex = i;
+
+								// Compute before/after step_numbers for the backend
+								const before =
+									toIndex === 0
+										? 0
+										: listSteps[toIndex - 1].stepNumber;
+								const after =
+									toIndex >= listSteps.length - 1
+										? listSteps[listSteps.length - 1]
+												.stepNumber + 1
+										: listSteps[toIndex].stepNumber;
+
+								// Optimistic UI update
+								const updated = [...listSteps];
+								const [moved] = updated.splice(fromIndex, 1);
+								const newStepNumber = (before + after) / 2;
+								updated.splice(toIndex, 0, {
+									...moved,
+									stepNumber: newStepNumber,
+								});
+								listSteps = updated;
+
+								reorderStep(draggedStepId, before, after);
+								draggedStepId = null;
+								dragOverStepId = null;
+							}}
+						>
+							<div class="step-drag-handle" aria-hidden="true">
+								<svg
+									viewBox="0 0 16 16"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.5"
+								>
+									<circle
+										cx="5.5"
+										cy="4"
+										r="1"
+										fill="currentColor"
+										stroke="none"
+									/>
+									<circle
+										cx="5.5"
+										cy="8"
+										r="1"
+										fill="currentColor"
+										stroke="none"
+									/>
+									<circle
+										cx="5.5"
+										cy="12"
+										r="1"
+										fill="currentColor"
+										stroke="none"
+									/>
+									<circle
+										cx="10.5"
+										cy="4"
+										r="1"
+										fill="currentColor"
+										stroke="none"
+									/>
+									<circle
+										cx="10.5"
+										cy="8"
+										r="1"
+										fill="currentColor"
+										stroke="none"
+									/>
+									<circle
+										cx="10.5"
+										cy="12"
+										r="1"
+										fill="currentColor"
+										stroke="none"
+									/>
+								</svg>
+							</div>
 							<div class="step-number">{i + 1}</div>
 							<div class="step-body">
-								{#if editingStepId === step.id}
+								{#if editingStepId !== null && editingStepId === step.id}
 									<textarea
 										class="step-edit-input"
 										bind:value={editingText}
@@ -636,6 +771,10 @@
 
 					{#if addingStep}
 						<li class="step-item step-item--draft">
+							<div
+								class="step-drag-handle"
+								aria-hidden="true"
+							></div>
 							<div class="step-number step-number--draft">
 								{listSteps.length + 1}
 							</div>

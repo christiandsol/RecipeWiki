@@ -842,3 +842,49 @@ input::placeholder {
     background: #e0e0e0;
     color: #999;
 }
+
+
+/* ── Drag and drop ── */
+.step-item {
+    cursor: default;
+    transition: opacity 0.15s, background 0.15s;
+}
+
+.step-item--dragging {
+    opacity: 0.4;
+}
+
+.step-item--dragover {
+    background: #f5f5f5;
+    border-radius: 8px;
+}
+
+.step-drag-handle {
+    flex-shrink: 0;
+    width: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ddd;
+    cursor: grab;
+    opacity: 0;
+    transition: opacity 0.15s, color 0.15s;
+    margin-top: 4px;
+}
+
+.step-item:hover .step-drag-handle {
+    opacity: 1;
+}
+
+.step-drag-handle:hover {
+    color: #aaa;
+}
+
+.step-drag-handle svg {
+    width: 14px;
+    height: 14px;
+}
+
+.step-item--dragging .step-drag-handle {
+    cursor: grabbing;
+}

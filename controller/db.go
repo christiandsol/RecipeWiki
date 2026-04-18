@@ -217,15 +217,16 @@ func PatchRecipe(conn *pgxpool.Pool, r Recipe) error {
 	return err
 }
 
-func InsertStep(conn *pgxpool.Pool, recipeID int, text string) (int, error) {
+func InsertStep(conn *pgxpool.Pool, recipeID int, text string) (int, float64, error) {
 	var stepID int
+	var stepNumber float64
 	err := conn.QueryRow(context.Background(),
 		`INSERT INTO steps (recipe_id, step_number, step_text)
          VALUES ($1, COALESCE((SELECT MAX(step_number) FROM steps WHERE recipe_id = $1), 0) + 1, $2)
-         RETURNING step_id`,
+         RETURNING step_id, step_number`,
 		recipeID, text,
-	).Scan(&stepID)
-	return stepID, err
+	).Scan(&stepID, &stepNumber)
+	return stepID, stepNumber, err
 }
 
 func UpdateStepText(conn *pgxpool.Pool, stepID int, text string) error {
@@ -236,7 +237,7 @@ func UpdateStepText(conn *pgxpool.Pool, stepID int, text string) error {
 	return err
 }
 
-func ReorderStep(conn *pgxpool.Pool, stepID int, before, after float64) error {
+func ReorderStepDB(conn *pgxpool.Pool, stepID int, before, after float64) error {
 	_, err := conn.Exec(context.Background(),
 		`UPDATE steps SET step_number = $1 WHERE step_id = $2`,
 		(before+after)/2, stepID,
@@ -276,7 +277,8 @@ func FindSteps(conn *pgxpool.Pool, recipeID int) ([]Step, error) {
 func FindStepsByRecipeID(conn *pgxpool.Pool, recipe_id int) ([]Step, error) {
 	// Fetch steps for recipe with recipe_id
 	rows, err := conn.Query(context.Background(),
-		`SELECT step_id, step_number, step_text FROM steps WHERE recipe_id = $1`, recipe_id,
+		`SELECT step_id, step_text, step_number FROM steps WHERE recipe_id = $1 ORDER BY step_number`,
+		recipe_id,
 	)
 	if err != nil {
 		return nil, err
@@ -285,8 +287,7 @@ func FindStepsByRecipeID(conn *pgxpool.Pool, recipe_id int) ([]Step, error) {
 	var steps []Step
 	for rows.Next() {
 		var s Step
-		err := rows.Scan(&s.StepID, &s.StepNumber, &s.StepText)
-		if err != nil {
+		if err := rows.Scan(&s.StepID, &s.StepText, &s.StepNumber); err != nil {
 			return nil, err
 		}
 		steps = append(steps, s)
