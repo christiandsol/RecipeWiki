@@ -7,7 +7,9 @@
 		type IngredientRes,
 	} from "$lib/types";
 	import { PUBLIC_URL } from "$env/static/public";
-	const SERVER_URL = `${PUBLIC_SERVER_URL}:${PUBLIC_SERVER_PORT}`;
+	const SERVER_URL = PUBLIC_SERVER_PORT
+		? `${PUBLIC_SERVER_URL}:${PUBLIC_SERVER_PORT}`
+		: PUBLIC_SERVER_URL;
 	const FALLBACK =
 		"https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=400&q=80";
 

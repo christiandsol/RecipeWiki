@@ -9,7 +9,9 @@
 	} from "$env/static/public";
 
 	// URL
-	const SERVER_URL = `${PUBLIC_SERVER_URL}:${PUBLIC_SERVER_PORT}`;
+	const SERVER_URL = PUBLIC_SERVER_PORT
+		? `${PUBLIC_SERVER_URL}:${PUBLIC_SERVER_PORT}`
+		: PUBLIC_SERVER_URL;
 
 	//Data Model
 	let listRecipes: Array<{
