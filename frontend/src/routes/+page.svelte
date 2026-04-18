@@ -50,14 +50,6 @@
 	const onFileChange = async (img: File | null | undefined) => {
 		if (!img) return;
 		previewUrl = URL.createObjectURL(img);
-		// const formData = new FormData();
-		// formData.append("image", img);
-		// const res = await fetch(`${SERVER_URL}/upload`, {
-		// 	method: "POST",
-		// 	body: formData,
-		// });
-		// const data = await res.json();
-		// console.log(data);
 	};
 
 	const onDrop = (e: DragEvent) => {
@@ -78,7 +70,6 @@
 	export const addRecipe = async (e: SubmitEvent) => {
 		e.preventDefault();
 		const formData = new FormData(e.target as HTMLFormElement);
-		// Send as multipart — DO NOT JSON.stringify
 		const response = await fetch(`${SERVER_URL}/recipe`, {
 			method: "POST",
 			body: formData,
@@ -119,7 +110,7 @@
 	};
 </script>
 
-<main class="page">
+<main class="home-page">
 	<header class="site-header">
 		<h1 class="site-title">Sol's Recipes</h1>
 		<p class="site-subtitle">Add and manage your recipes</p>
@@ -247,15 +238,6 @@
 						>
 					</div>
 				{/if}
-				<input
-					bind:this={fileInput}
-					type="file"
-					name="image"
-					accept="image/*"
-					class="file-input-hidden"
-					onchange={(e) =>
-						onFileChange((e.target as HTMLInputElement).files?.[0])}
-				/>
 			</div>
 
 			<button class="submit-btn" type="submit">Add Recipe</button>
