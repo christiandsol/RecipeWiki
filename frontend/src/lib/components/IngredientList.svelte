@@ -16,7 +16,7 @@
         { value: "high", label: "High", color: "#f87171", bg: "#fef2f2" },
         { value: "medium", label: "Medium", color: "#fb923c", bg: "#fff7ed" },
         { value: "low", label: "Low", color: "#4ade80", bg: "#f0fdf4" },
-        { value: "none", label: "None", color: "#94a3b8", bg: "#f1f5f9" },
+        { value: "out", label: "Out", color: "#94a3b8", bg: "#f1f5f9" },
     ];
 
     const getPriority = (value: string) =>

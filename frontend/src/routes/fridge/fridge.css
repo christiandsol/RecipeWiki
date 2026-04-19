@@ -1,0 +1,247 @@
+.fridge-page {
+    max-width: 700px;
+    margin: 4rem auto;
+    padding: 0 2rem;
+    font-family: 'Inter', system-ui, sans-serif;
+    color: #1a1a1a;
+}
+
+.fridge-header {
+    margin-bottom: 2.5rem;
+}
+
+.back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #999;
+    text-decoration: none;
+    margin-bottom: 1rem;
+    transition: color 0.15s;
+}
+
+.back-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.back-btn:hover {
+    color: #1a1a1a;
+}
+
+.fridge-title {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin: 0 0 0.3rem 0;
+}
+
+.fridge-subtitle {
+    font-size: 0.875rem;
+    color: #aaa;
+    margin: 0;
+}
+
+.fridge-loading {
+    color: #ccc;
+    font-size: 0.9rem;
+}
+
+.fridge-empty {
+    text-align: center;
+    padding: 4rem 0;
+}
+
+.fridge-empty-label {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #999;
+    margin: 0 0 0.4rem 0;
+}
+
+.fridge-empty-hint {
+    font-size: 0.8rem;
+    color: #ccc;
+    margin: 0;
+}
+
+.fridge-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.fridge-group {
+    background: #fff;
+    border: 1px solid #ebebeb;
+    border-radius: 12px;
+}
+
+.fridge-group-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.9rem 1.25rem;
+    border-bottom: 1px solid #f0f0f0;
+    background: #fafafa;
+    border-radius: 12px 12px 0 0;
+}
+
+.fridge-group-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.fridge-group-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #aaa;
+    margin: 0;
+    flex: 1;
+}
+
+.fridge-group-count {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #ccc;
+}
+
+.fridge-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.fridge-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid #f5f5f5;
+}
+
+.fridge-item:last-child {
+    border-bottom: none;
+    border-radius: 0 0 12px 12px;
+
+}
+
+.fridge-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.fridge-item-name {
+    font-size: 0.92rem;
+    font-weight: 500;
+    color: #1a1a1a;
+}
+
+.fridge-item-amount {
+    font-size: 0.78rem;
+    color: #bbb;
+}
+
+/* ── Priority Badge & Dropdown (shared) ── */
+.priority-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.priority-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.6rem 0.25rem 0.5rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: filter 0.12s ease;
+    font-family: inherit;
+    line-height: 1;
+}
+
+.priority-badge:hover {
+    filter: brightness(0.94);
+}
+
+.priority-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.priority-chevron {
+    width: 8px;
+    height: 8px;
+    margin-left: 1px;
+    opacity: 0.7;
+}
+
+.priority-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 100;
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    padding: 0.35rem;
+    margin: 0;
+    list-style: none;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.06);
+    min-width: 120px;
+    animation: dropdown-in 0.1s ease;
+}
+
+@keyframes dropdown-in {
+    from {
+        opacity: 0;
+        transform: translateY(-4px) scale(0.97);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.priority-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.4rem 0.6rem;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: #1a1a1a;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.1s ease;
+    text-align: left;
+}
+
+.priority-option:hover {
+    background: var(--opt-bg);
+    color: var(--opt-color);
+}
+
+.priority-option--active {
+    background: var(--opt-bg);
+    color: var(--opt-color);
+}

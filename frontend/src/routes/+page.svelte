@@ -112,10 +112,30 @@
 
 <main class="home-page">
 	<header class="site-header">
-		<h1 class="site-title">Sol's Recipes</h1>
-		<p class="site-subtitle">Add and manage your recipes</p>
+		<div class="site-header-top">
+			<div>
+				<h1 class="site-title">Sol's Recipes</h1>
+				<p class="site-subtitle">Add and manage your recipes</p>
+			</div>
+			<a href="/fridge" class="fridge-btn">
+				<svg
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.5"
+				>
+					<path
+						d="M8 2h8a2 2 0 012 2v16a2 2 0 01-2 2H8a2 2 0 01-2-2V4a2 2 0 012-2z"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/>
+					<path d="M6 10h12" stroke-linecap="round" />
+					<path d="M10 6v2M10 14v3" stroke-linecap="round" />
+				</svg>
+				My Fridge
+			</a>
+		</div>
 	</header>
-
 	<section class="gallery-section">
 		<h2 class="section-title">Your Recipes</h2>
 		{#if listRecipes.length === 0}

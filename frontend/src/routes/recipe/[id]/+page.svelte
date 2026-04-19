@@ -59,6 +59,7 @@
 					amount: item.amount,
 					current_amount: item.current_amount,
 					specifier: item.specifier,
+					// TODO: Figure out why this current amount ruins refresh
 					priority: item.current_amount,
 				}));
 			}
@@ -101,7 +102,7 @@
 				name: formData.get("ingredient") as string,
 				amount: Number(formData.get("amount")),
 				specifier: String(formData.get("specifier")),
-				current_amount: "none",
+				current_amount: "out",
 			});
 			(e.target as HTMLFormElement).reset();
 		}
