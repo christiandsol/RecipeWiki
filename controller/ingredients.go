@@ -3,14 +3,14 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/christiandsol/main/model"
+	repo "github.com/christiandsol/main/repository"
 	"io"
 	"net/http"
-
-	"github.com/christiandsol/main/errUtil"
 )
 
 type Response struct {
-	Ingredients []Ingredient `json:"ingredients"`
+	Ingredients []model.Ingredient `json:"ingredients"`
 }
 
 func (g *Global) GetIngredients(w http.ResponseWriter, r *http.Request) {
@@ -31,7 +31,7 @@ func (g *Global) GetIngredients(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("[ERROR] Invalid json sent"))
 		return
 	}
-	ingredients, err := FindIngredients(g.Conn, body.ID)
+	ingredients, err := repo.FindIngredients(g.Conn, body.ID)
 	if err != nil {
 		fmt.Printf("[ERROR] Unable to find recipe by id, err: %v", err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -71,7 +71,7 @@ func (g *Global) AddIngredient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var ingredient Ingredient
+	var ingredient model.Ingredient
 	err = json.Unmarshal(bytesRead, &ingredient)
 	if err != nil {
 		fmt.Printf("[ERROR] Error unmarshalling, bad request\n")
@@ -82,7 +82,7 @@ func (g *Global) AddIngredient(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Printf("Printing ingredient: %v", ingredient)
 
-	ingredientId, err := InsertIngredient(g.Conn, ingredient)
+	ingredientId, err := repo.InsertIngredient(g.Conn, ingredient)
 	if err != nil {
 		fmt.Printf("[ERROR] Error inserting ingredient\n")
 		w.WriteHeader(http.StatusBadRequest)
@@ -114,7 +114,7 @@ func (g *Global) DeleteIngredient(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Printing bytes gotten from delete pathway")
 	fmt.Println(string(bytesRead))
 
-	var delIng DeleteIngredient
+	var delIng model.DeleteIngredient
 	err = json.Unmarshal(bytesRead, &delIng)
 	if err != nil {
 		fmt.Printf("[ERROR] Unable to unmarshal: %v", err)
@@ -126,7 +126,7 @@ func (g *Global) DeleteIngredient(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, "Check that JSON is valid and RecipeID is filled")
 		return
 	}
-	err = RemoveIngredient(g.Conn, delIng.IngID)
+	err = repo.RemoveIngredient(g.Conn, delIng.IngID)
 	if err != nil {
 		fmt.Printf("[ERROR] error removing ingredient %v", err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -148,9 +148,8 @@ func (g *Global) UpdateIngredient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var ingredient Ingredient
+	var ingredient model.Ingredient
 	err = json.Unmarshal(bytesRead, &ingredient)
-	errUtil.CheckErr("Error Unmarshalling", nil, err)
 	if err != nil {
 		fmt.Printf("[ERROR] Invalid JSON for %v", string(bytesRead))
 		w.WriteHeader(http.StatusBadRequest)
@@ -158,7 +157,7 @@ func (g *Global) UpdateIngredient(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = UpdateIngredient(g.Conn, ingredient)
+	err = repo.UpdateIngredient(g.Conn, ingredient)
 	if err != nil {
 		fmt.Printf("[ERROR] Unable to update ingredient from server side: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)

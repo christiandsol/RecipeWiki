@@ -3,6 +3,8 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/christiandsol/main/model"
+	repo "github.com/christiandsol/main/repository"
 	"io"
 	"net/http"
 	"strconv"
@@ -17,7 +19,7 @@ func (g *Global) GetRecipe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	recipe, err := FindRecipeByID(g.Conn, id)
+	recipe, err := repo.FindRecipeByID(g.Conn, id)
 	if err != nil {
 		http.Error(w, "recipe not found", http.StatusNotFound)
 		return
@@ -35,7 +37,7 @@ func (g *Global) GetRecipe(w http.ResponseWriter, r *http.Request) {
 
 func (g *Global) GetRecipes(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("GETTING RECIPES")
-	recipes, err := QueryRecipes(g.Conn)
+	recipes, err := repo.QueryRecipes(g.Conn)
 	if err != nil {
 		fmt.Printf("[ERROR], error querying recipes: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -76,13 +78,13 @@ func (g *Global) AddRecipe(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	recipe := Recipe{
+	recipe := model.Recipe{
 		Name:        name,
 		Description: description,
 		ImagePath:   imageFilename,
 	}
 
-	id, err := InsertRecipe(g.Conn, recipe)
+	id, err := repo.InsertRecipe(g.Conn, recipe)
 	if err != nil {
 		fmt.Printf("[ERROR] Unable to insert recipe, err: %v\n", err)
 		http.Error(w, "[ERROR] Unable to insert recipe", http.StatusInternalServerError)
@@ -123,7 +125,7 @@ func (g *Global) DeleteRecipe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fileName, err := RemoveRecipe(g.Conn, deleteRec.RecipeId)
+	fileName, err := repo.RemoveRecipe(g.Conn, deleteRec.RecipeId)
 	if err != nil {
 		fmt.Printf("[ERROR] Unable to remove recipe", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -145,7 +147,7 @@ func (g *Global) DeleteRecipe(w http.ResponseWriter, r *http.Request) {
 
 func (g *Global) UpdateRecipe(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("[DEBUG] Update recipe")
-	var recipe Recipe
+	var recipe model.Recipe
 
 	if strings.Contains(r.Header.Get("Content-Type"), "multipart/form-data") {
 		// Image upload path
@@ -173,7 +175,7 @@ func (g *Global) UpdateRecipe(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			recipe.ImagePath = filename
-			oldRecipe, err := FindRecipeByID(g.Conn, recipe.RecipeID)
+			oldRecipe, err := repo.FindRecipeByID(g.Conn, recipe.RecipeID)
 			if err != nil {
 				fmt.Printf("[ERROR] Unable to find original recipe %v\n", err)
 				w.WriteHeader(http.StatusBadRequest)
@@ -201,7 +203,7 @@ func (g *Global) UpdateRecipe(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if err := PatchRecipe(g.Conn, recipe); err != nil {
+	if err := repo.PatchRecipe(g.Conn, recipe); err != nil {
 		fmt.Printf("[ERROR] Unable to update recipe: %v\n", err)
 		http.Error(w, "[ERROR] Unable to update recipe", http.StatusInternalServerError)
 		return

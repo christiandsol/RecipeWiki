@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+
+	repo "github.com/christiandsol/main/repository"
 )
 
 func (g *Global) AddStep(w http.ResponseWriter, r *http.Request) {
@@ -30,7 +32,7 @@ func (g *Global) AddStep(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	step_id, step_number, err := InsertStep(g.Conn, stepJSON.RecipeID, stepJSON.StepText)
+	step_id, step_number, err := repo.InsertStep(g.Conn, stepJSON.RecipeID, stepJSON.StepText)
 	if err != nil {
 		fmt.Printf("[ERROR] Unable to insert step: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -78,7 +80,7 @@ func (g *Global) UpdateStep(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("[ERROR] Check JSON"))
 		return
 	}
-	err = UpdateStepText(g.Conn, stepJSON.StepID, stepJSON.StepText)
+	err = repo.UpdateStepText(g.Conn, stepJSON.StepID, stepJSON.StepText)
 	if err != nil {
 		fmt.Printf("[ERROR] Unable to update step text\n")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -98,7 +100,7 @@ func (g *Global) GetSteps(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	steps, err := FindStepsByRecipeID(g.Conn, recipe_id)
+	steps, err := repo.FindStepsByRecipeID(g.Conn, recipe_id)
 	if err != nil {
 		fmt.Printf("[ERROR] Unable to Find Steps by Recipe id %v\n", recipe_id)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -144,7 +146,7 @@ func (g *Global) DeleteStep(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = DeleteStep(g.Conn, req.ID)
+	err = repo.DeleteStep(g.Conn, req.ID)
 	if err != nil {
 		fmt.Printf("[ERROR] Error deleting step %v: %v\n", req.ID, err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -171,7 +173,7 @@ func (g *Global) ReorderStep(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid JSON", http.StatusBadRequest)
 		return
 	}
-	err = ReorderStepDB(g.Conn, body.StepID, body.Before, body.After)
+	err = repo.ReorderStepDB(g.Conn, body.StepID, body.Before, body.After)
 	if err != nil {
 		fmt.Printf("[ERROR] Unable to reorder step %v: %v\n", body.StepID, err)
 		http.Error(w, "unable to reorder step", http.StatusInternalServerError)

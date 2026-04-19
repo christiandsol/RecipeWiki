@@ -1,29 +1,4 @@
-package controller
-
-import (
-	"sync"
-
-	"github.com/jackc/pgx/v5/pgxpool"
-)
-
-func NewStore() *Store {
-	return &Store{
-		NameID: make(map[string]int),
-	}
-}
-
-type Global struct {
-	Conn   *pgxpool.Pool
-	ImgDir string
-}
-
-type Store struct {
-	Mu               sync.Mutex
-	Recipes          []Recipe
-	NextID           int
-	NameID           map[string]int
-	NextIngredientID int
-}
+package model
 
 type Ingredient struct {
 	RecipeID      int     `json:"id"` // ID ingredient belongs to

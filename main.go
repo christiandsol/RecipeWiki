@@ -8,7 +8,7 @@ import (
 	"os"
 
 	c "github.com/christiandsol/main/controller"
-	"github.com/christiandsol/main/errUtil"
+	"github.com/christiandsol/main/db"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -98,7 +98,7 @@ func main() {
 		return
 	}
 
-	err = c.RunMigrations(pool)
+	err = db.RunMigrations(pool)
 	if err != nil {
 		fmt.Println("Unable to migrate:", err)
 		return
@@ -125,9 +125,13 @@ func main() {
 	mux.HandleFunc("DELETE /step", global.DeleteStep)
 	mux.HandleFunc("PATCH /step/reorder", global.ReorderStep)
 	mux.HandleFunc("PATCH /step", global.UpdateStep)
+	// fridge
+	mux.HandleFunc("GET /fridge", global.GetFridge)
 	mux.Handle("/", http.FileServer(http.Dir("./frontend/build")))
 	// Image server
 	mux.Handle("/images/", http.StripPrefix("/images/", http.FileServer(http.Dir(global.ImgDir))))
 	err = http.ListenAndServe("0.0.0.0:8080", CorsHandler(mux))
-	errUtil.CheckErr("Error Starting server", nil, err)
+	if err != nil {
+		fmt.Printf("[ERROR] Error starting server %v", err)
+	}
 }
