@@ -106,13 +106,21 @@ func (g *Global) DeleteIngredient(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("[DEBUG] DELETING INGREDIENT")
 	defer r.Body.Close()
 	bytesRead, err := io.ReadAll(r.Body)
-	errUtil.CheckErr("Error reading", bytesRead, err)
+	if err != nil {
+		fmt.Printf("[ERROR] Unable to read body: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 	fmt.Println("Printing bytes gotten from delete pathway")
 	fmt.Println(string(bytesRead))
 
 	var delIng DeleteIngredient
 	err = json.Unmarshal(bytesRead, &delIng)
-	errUtil.CheckErr("Error Unmarshalling", nil, err)
+	if err != nil {
+		fmt.Printf("[ERROR] Unable to unmarshal: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		io.WriteString(w, "Check that JSON is valid and RecipeID is filled")
@@ -127,15 +135,18 @@ func (g *Global) DeleteIngredient(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Successfully deleted ingredient"))
+	fmt.Printf("SUCCESSFULLY DELETED INGREDIENT")
 }
 
 func (g *Global) UpdateIngredient(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("[DEBUG] Updating INGREDIENT")
 	defer r.Body.Close()
 	bytesRead, err := io.ReadAll(r.Body)
-	errUtil.CheckErr("Error reading", bytesRead, err)
-	fmt.Println("Printing bytes gotten from update pathway")
-	fmt.Println(string(bytesRead))
+	if err != nil {
+		fmt.Printf("[ERROR] Unable to read body: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
 	var ingredient Ingredient
 	err = json.Unmarshal(bytesRead, &ingredient)
@@ -156,4 +167,5 @@ func (g *Global) UpdateIngredient(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Successfully updated ingredient"))
+	fmt.Println("DELETED INGREDIENT")
 }

@@ -1,3 +1,4 @@
+
 export type RecipeRes = {
 	name: string;
 	description: string;
@@ -24,3 +25,8 @@ export type IngredientRes = {
 export type Ingredients = {
 	ingredients: Array<IngredientRes>;
 };
+
+export type GetStepResult = {
+	step_id: number;
+	step_number: string;
+}

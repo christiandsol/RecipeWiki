@@ -1,12 +1,25 @@
 <script lang="ts">
 	import "./recipe.css";
 	import { PUBLIC_SERVER_URL, PUBLIC_SERVER_PORT } from "$env/static/public";
+	import { addStep, updateStep, reorderStep } from "$lib/api/stepService.js";
+	import { patchRecipe, fetchRecipe } from "$lib/api/recipeService.js";
+	import {
+		deleteIngredientDB,
+		postIngredient,
+	} from "$lib/api/ingredientService.js";
+	import SideNav from "$lib/components/SideNav.svelte";
+	import RecipeHero from "$lib/components/RecipeHero.svelte";
+	import IngredientForm from "$lib/components/IngredientForm.svelte";
+
 	import {
 		type Ingredients,
 		type Response,
 		type IngredientRes,
+		type GetStepResult,
 	} from "$lib/types";
 	import { PUBLIC_URL } from "$env/static/public";
+	import IngredientList from "$lib/components/IngredientList.svelte";
+	import StepList from "$lib/components/StepList.svelte";
 	const SERVER_URL = PUBLIC_SERVER_PORT
 		? `${PUBLIC_SERVER_URL}:${PUBLIC_SERVER_PORT}`
 		: PUBLIC_SERVER_URL;
@@ -93,20 +106,11 @@
 	};
 
 	const addIngredient = async (e: SubmitEvent) => {
+		console.log(`HERE`);
 		e.preventDefault();
 		const formData = new FormData(e.target as HTMLFormElement);
-		const response = await fetch(`${PUBLIC_URL}/ingredient`, {
-			method: "POST",
-			body: JSON.stringify({
-				id: props.id,
-				name: formData.get("ingredient")?.toString(),
-				amount: Number(formData.get("amount")),
-				specifier: formData.get("specifier")?.toString(),
-				current_amount: "out",
-			}),
-		});
-
-		const data: Response = await response.json();
+		const response = await postIngredient(props.id, formData);
+		const data = await response.json();
 		if (response.ok) {
 			listIngredients.push({
 				id: data.id,
@@ -120,24 +124,13 @@
 
 	const deleteIngredient = async (e: MouseEvent, item: IngredientRes) => {
 		e.preventDefault();
-		const response = await fetch(`${PUBLIC_URL}/ingredient`, {
-			method: "DELETE",
-			body: JSON.stringify({
-				recipe_id: props.id,
-				id: item.ingredient_id,
-				name: item.name.toLowerCase(),
-			}),
-		});
-
-		const msg = await response.text();
-		if (response.ok) {
+		const ok = await deleteIngredientDB(props.id, item);
+		if (ok) {
 			listIngredients = listIngredients.filter(
 				(i) => i.ingredient_id !== item.ingredient_id,
 			);
 		} else {
-			console.log(
-				`[ERROR] Error deleting ingredient, server responded ${msg}`,
-			);
+			console.log("[ERROR] unable to delete ingredient");
 		}
 	};
 
@@ -190,74 +183,50 @@
 		field: "name" | "description" | "image",
 		value: string | File,
 	) => {
-		const formData = new FormData();
-		formData.append("id", String(recipe.id));
-		formData.append(
-			"name",
-			field === "name" ? (value as string) : recipe.name,
-		);
-		formData.append(
-			"description",
-			field === "description" ? (value as string) : recipe.description,
-		);
-
 		if (field === "image") {
-			heroPreviewUrl = URL.createObjectURL(value as File); // instant preview
-			formData.append("image", value as File);
+			heroPreviewUrl = URL.createObjectURL(value as File);
 		}
 
-		const response = await fetch(`${SERVER_URL}/recipe`, {
-			method: "PATCH",
-			body: formData,
-		});
+		const ok = await patchRecipe(
+			recipe.id,
+			recipe.name,
+			recipe.description,
+			field,
+			value,
+		);
 
-		if (!response.ok) {
+		if (!ok) {
 			console.error("[ERROR] Failed to update recipe");
 			heroPreviewUrl = null;
 			return;
 		}
 
 		if (field === "image") {
-			const updated = await fetch(`${SERVER_URL}/recipe/${recipe.id}`);
-			recipe = await updated.json();
+			recipe = await fetchRecipe(recipe.id);
 			heroPreviewUrl = null;
 		} else {
 			recipe = { ...recipe, [field]: value };
 		}
 	};
 
-	const addStep = async () => {
-		if (!draftText.trim()) return;
-		const response = await fetch(`${SERVER_URL}/step`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				recipe_id: props.id,
-				step_text: draftText.trim(),
-			}),
+	const handleAddStep = async () => {
+		const data: GetStepResult = await addStep(props.id, draftText);
+		if (!data) return;
+
+		listSteps.push({
+			id: data.step_id,
+			text: draftText.trim(),
+			stepNumber: data.step_number,
 		});
-		if (response.ok) {
-			const data = await response.json();
-			listSteps.push({
-				id: data.step_id,
-				text: draftText.trim(),
-				stepNumber: data.step_number,
-			});
-			draftText = "";
-			addingStep = false;
-		}
+		draftText = "";
+		addingStep = false;
 	};
 
-	const updateStep = async (step: { id: number; text: string }) => {
-		if (!editingText.trim()) return;
-		const response = await fetch(`${SERVER_URL}/step`, {
-			method: "PATCH",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ id: step.id, text: editingText.trim() }),
-		});
-		if (response.ok) {
+	const handleUpdateStep = async (step_id: number, text: string) => {
+		const ok: boolean = await updateStep(step_id, text);
+		if (ok) {
 			listSteps = listSteps.map((s) =>
-				s.id === step.id ? { ...s, text: editingText.trim() } : s,
+				s.id === step_id ? { ...s, text: text.trim() } : s,
 			);
 			editingStepId = null;
 		}
@@ -273,547 +242,42 @@
 			listSteps = listSteps.filter((s) => s.id !== stepId);
 		}
 	};
-
-	const reorderStep = async (
-		stepId: number,
-		before: number,
-		after: number,
-	) => {
-		const response = await fetch(`${SERVER_URL}/step/reorder`, {
-			method: "PATCH",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ step_id: stepId, before, after }),
-		});
-		if (!response.ok) {
-			console.error("[ERROR] Failed to reorder step");
-		}
-	};
 </script>
 
 <svelte:window onclick={closeAllDropdowns} />
 
 <main class="recipe-page">
-	<!-- Floating side nav -->
-	<nav class="side-nav">
-		<a href="#top" class="side-nav-item" title="Top">
-			<svg
-				viewBox="0 0 16 16"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="1.8"
-			>
-				<path
-					d="M8 12V4M4 7l4-4 4 4"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-				/>
-			</svg>
-			<span class="side-nav-label">Top</span>
-		</a>
-		<div class="side-nav-divider"></div>
-		<a href="#ingredients" class="side-nav-item" title="Ingredients">
-			<svg
-				viewBox="0 0 16 16"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="1.8"
-			>
-				<circle cx="8" cy="8" r="5.5" />
-				<path d="M8 5.5v5M5.5 8h5" stroke-linecap="round" />
-			</svg>
-			<span class="side-nav-label">Ingredients</span>
-		</a>
-		<a href="#steps" class="side-nav-item" title="Steps">
-			<svg
-				viewBox="0 0 16 16"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="1.8"
-			>
-				<path d="M3 4h10M3 8h7M3 12h5" stroke-linecap="round" />
-			</svg>
-			<span class="side-nav-label">Steps</span>
-		</a>
-	</nav>
-
+	<SideNav />
 	<div class="recipe-content" id="top">
 		{#if recipe}
-			<div class="recipe-hero">
-				{#if recipe.image_url}
-					<img
-						class="recipe-hero-img"
-						src={heroPreviewUrl ??
-							`${SERVER_URL}/images/${recipe.image_url}`}
-						alt={recipe.name}
-					/>
-					<div class="recipe-hero-overlay">
-						<button
-							class="hero-change-btn"
-							type="button"
-							onclick={() => fileInput.click()}
-						>
-							Change photo
-						</button>
-					</div>
-				{:else}
-					<div
-						class="recipe-hero-upload"
-						role="button"
-						tabindex="0"
-						onclick={() => fileInput.click()}
-						onkeydown={(e) =>
-							e.key === "Enter" && fileInput.click()}
-					>
-						<div class="hero-upload-icon-wrap">
-							<svg
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="1.5"
-							>
-								<path
-									d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								/>
-							</svg>
-						</div>
-						<span class="hero-upload-label">Add a photo</span>
-						<span class="hero-upload-hint"
-							>PNG, JPG, WEBP · max 20 MB</span
-						>
-					</div>
-				{/if}
-			</div>
-
-			<input
-				bind:this={fileInput}
-				type="file"
-				accept="image/*"
-				class="file-input-hidden"
-				onchange={(e) => {
-					const file = (e.target as HTMLInputElement).files?.[0];
-					if (file) updateRecipe("image", file);
-				}}
+			<RecipeHero
+				{recipe}
+				{heroPreviewUrl}
+				{SERVER_URL}
+				{updateRecipe}
+				onFileInputBind={(el) => (fileInput = el)}
 			/>
-
-			<div class="recipe-caption">
-				<textarea
-					class="recipe-caption-name-input"
-					value={recipe.name}
-					onblur={(e) => updateRecipe("name", e.currentTarget.value)}
-					rows="1"
-					placeholder="Recipe name"
-				/>
-				<textarea
-					class="recipe-caption-desc-input"
-					value={recipe.description}
-					onblur={(e) =>
-						updateRecipe("description", e.currentTarget.value)}
-					rows="2"
-					placeholder="Add a description"
-				/>
-			</div>
 		{/if}
 
 		<!-- Add Ingredient -->
-		<section class="form-section" id="ingredients">
-			<h2 class="section-title">Add Ingredient</h2>
-			<form class="ingredient-form" onsubmit={addIngredient}>
-				<div class="field-group">
-					<label for="ingredient">Name</label>
-					<input
-						id="ingredient"
-						type="text"
-						name="ingredient"
-						placeholder="e.g. flour"
-						required
-					/>
-				</div>
-				<div class="field-row">
-					<div class="field-group">
-						<label for="amount">Amount</label>
-						<input
-							id="amount"
-							type="number"
-							name="amount"
-							placeholder="0"
-							required
-						/>
-					</div>
-					<div class="field-group">
-						<label for="specifier">Unit</label>
-						<select id="specifier" name="specifier">
-							<optgroup label="Volume">
-								<option value="tsp">Teaspoon (tsp)</option>
-								<option value="tbsp">Tablespoon (tbsp)</option>
-								<option value="cups">Cups</option>
-								<option value="ml">Milliliters (ml)</option>
-								<option value="l">Liters (l)</option>
-							</optgroup>
-							<optgroup label="Weight">
-								<option value="grams">Grams (g)</option>
-								<option value="kg">Kilograms (kg)</option>
-								<option value="oz">Ounces (oz)</option>
-								<option value="lb">Pounds (lb)</option>
-							</optgroup>
-							<optgroup label="Count">
-								<option value="unit">Unit / Piece</option>
-								<option value="serving">Serving</option>
-							</optgroup>
-						</select>
-					</div>
-				</div>
-				<button class="submit-btn" type="submit">Add Ingredient</button>
-			</form>
-		</section>
-
+		<IngredientForm {addIngredient} />
 		<!-- Ingredients list -->
-		<section class="list-section">
-			<h2 class="section-title">Ingredients</h2>
-			{#if listIngredients.length === 0}
-				<p class="empty-state">No ingredients added yet.</p>
-			{:else}
-				<ul class="ingredient-list">
-					{#each listIngredients as item}
-						{@const p = getPriority(item.priority ?? "none")}
-						<li class="ingredient-item">
-							<span class="ingredient-name">{item.name}</span>
-							<span class="ingredient-measure">
-								<span class="ingredient-amount"
-									>{item.amount}</span
-								>
-								<span class="ingredient-unit"
-									>{item.specifier}</span
-								>
-								<div class="priority-wrapper">
-									<button
-										class="priority-badge"
-										style="color: {p.color}; background: {p.bg};"
-										onclick={(e) =>
-											toggleDropdown(
-												e,
-												item.ingredient_id,
-											)}
-									>
-										<span
-											class="priority-dot"
-											style="background:{p.color};"
-										></span>
-										{p.label}
-										<svg
-											class="priority-chevron"
-											viewBox="0 0 10 6"
-											fill="none"
-										>
-											<path
-												d="M1 1l4 4 4-4"
-												stroke="currentColor"
-												stroke-width="1.5"
-												stroke-linecap="round"
-											/>
-										</svg>
-									</button>
-									{#if openDropdown === item.ingredient_id}
-										<ul
-											class="priority-menu"
-											onclick={(e) => e.stopPropagation()}
-										>
-											{#each priorities as opt}
-												<li>
-													<button
-														class="priority-option"
-														class:priority-option--active={item.priority ===
-															opt.value}
-														style="--opt-color:{opt.color}; --opt-bg:{opt.bg};"
-														onclick={() =>
-															setPriority(
-																item,
-																opt.value,
-															)}
-													>
-														<span
-															class="priority-dot"
-															style="background:{opt.color};"
-														></span>
-														{opt.label}
-													</button>
-												</li>
-											{/each}
-										</ul>
-									{/if}
-								</div>
-								<button
-									class="remove-btn"
-									onclick={(e) => deleteIngredient(e, item)}
-								>
-									Remove
-								</button>
-							</span>
-						</li>
-					{/each}
-				</ul>
-			{/if}
-		</section>
-
+		<IngredientList
+			{listIngredients}
+			{getPriority}
+			{toggleDropdown}
+			{openDropdown}
+			{priorities}
+			{setPriority}
+			{deleteIngredient}
+		/>
 		<!-- Steps -->
-		<section class="steps-section" id="steps">
-			<div class="steps-header">
-				<h2 class="section-title">Steps</h2>
-				<button
-					class="add-step-btn"
-					onclick={() => {
-						addingStep = true;
-					}}
-					disabled={addingStep}
-				>
-					<svg
-						viewBox="0 0 16 16"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-					>
-						<path d="M8 3v10M3 8h10" stroke-linecap="round" />
-					</svg>
-					Add step
-				</button>
-			</div>
-
-			{#if listSteps.length === 0 && !addingStep}
-				<div class="steps-empty">
-					<div class="steps-empty-icon">
-						<svg
-							viewBox="0 0 24 24"
-							fill="none"
-							stroke="currentColor"
-							stroke-width="1.5"
-						>
-							<path
-								d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-							/>
-						</svg>
-					</div>
-					<p class="steps-empty-label">No steps yet</p>
-					<p class="steps-empty-hint">
-						Add step-by-step instructions for this recipe
-					</p>
-				</div>
-			{:else}
-				<ol class="steps-list">
-					{#each listSteps as step, i}
-						<li
-							class="step-item"
-							class:step-item--dragging={draggedStepId ===
-								step.id}
-							class:step-item--dragover={dragOverStepId ===
-								step.id}
-							draggable="true"
-							ondragstart={() => {
-								draggedStepId = step.id;
-							}}
-							ondragend={() => {
-								draggedStepId = null;
-								dragOverStepId = null;
-							}}
-							ondragover={(e) => {
-								e.preventDefault();
-								if (draggedStepId !== step.id)
-									dragOverStepId = step.id;
-							}}
-							ondragleave={() => {
-								if (dragOverStepId === step.id)
-									dragOverStepId = null;
-							}}
-							ondrop={(e) => {
-								e.preventDefault();
-								if (
-									draggedStepId === null ||
-									draggedStepId === step.id
-								)
-									return;
-
-								const fromIndex = listSteps.findIndex(
-									(s) => s.id === draggedStepId,
-								);
-								const toIndex = i;
-
-								// Compute before/after step_numbers for the backend
-								const before =
-									toIndex === 0
-										? 0
-										: listSteps[toIndex - 1].stepNumber;
-								const after =
-									toIndex >= listSteps.length - 1
-										? listSteps[listSteps.length - 1]
-												.stepNumber + 1
-										: listSteps[toIndex].stepNumber;
-
-								// Optimistic UI update
-								const updated = [...listSteps];
-								const [moved] = updated.splice(fromIndex, 1);
-								const newStepNumber = (before + after) / 2;
-								updated.splice(toIndex, 0, {
-									...moved,
-									stepNumber: newStepNumber,
-								});
-								listSteps = updated;
-
-								reorderStep(draggedStepId, before, after);
-								draggedStepId = null;
-								dragOverStepId = null;
-							}}
-						>
-							<div class="step-drag-handle" aria-hidden="true">
-								<svg
-									viewBox="0 0 16 16"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="1.5"
-								>
-									<circle
-										cx="5.5"
-										cy="4"
-										r="1"
-										fill="currentColor"
-										stroke="none"
-									/>
-									<circle
-										cx="5.5"
-										cy="8"
-										r="1"
-										fill="currentColor"
-										stroke="none"
-									/>
-									<circle
-										cx="5.5"
-										cy="12"
-										r="1"
-										fill="currentColor"
-										stroke="none"
-									/>
-									<circle
-										cx="10.5"
-										cy="4"
-										r="1"
-										fill="currentColor"
-										stroke="none"
-									/>
-									<circle
-										cx="10.5"
-										cy="8"
-										r="1"
-										fill="currentColor"
-										stroke="none"
-									/>
-									<circle
-										cx="10.5"
-										cy="12"
-										r="1"
-										fill="currentColor"
-										stroke="none"
-									/>
-								</svg>
-							</div>
-							<div class="step-number">{i + 1}</div>
-							<div class="step-body">
-								{#if editingStepId !== null && editingStepId === step.id}
-									<textarea
-										class="step-edit-input"
-										bind:value={editingText}
-										rows="3"
-										onkeydown={(e) => {
-											if (
-												e.key === "Enter" &&
-												!e.shiftKey
-											) {
-												e.preventDefault();
-												updateStep(step);
-											}
-											if (e.key === "Escape")
-												editingStepId = null;
-										}}
-									/>
-									<div class="step-draft-actions">
-										<button
-											class="step-confirm-btn"
-											onclick={() => updateStep(step)}
-											>Save</button
-										>
-										<button
-											class="step-cancel-btn"
-											onclick={() =>
-												(editingStepId = null)}
-											>Cancel</button
-										>
-									</div>
-								{:else}
-									<p class="step-text">{step.text}</p>
-									<div class="step-actions">
-										<button
-											class="step-action-btn"
-											onclick={() => {
-												editingStepId = step.id;
-												editingText = step.text;
-											}}>Edit</button
-										>
-										<button
-											class="step-action-btn step-action-btn--danger"
-											onclick={() => deleteStep(step.id)}
-											>Remove</button
-										>
-									</div>
-								{/if}
-							</div>
-						</li>
-					{/each}
-
-					{#if addingStep}
-						<li class="step-item step-item--draft">
-							<div
-								class="step-drag-handle"
-								aria-hidden="true"
-							></div>
-							<div class="step-number step-number--draft">
-								{listSteps.length + 1}
-							</div>
-							<div class="step-body">
-								<textarea
-									class="step-edit-input"
-									bind:value={draftText}
-									rows="3"
-									placeholder="Describe this step…"
-									autofocus
-									onkeydown={(e) => {
-										if (e.key === "Enter" && !e.shiftKey) {
-											e.preventDefault();
-											addStep();
-										}
-										if (e.key === "Escape") {
-											addingStep = false;
-											draftText = "";
-										}
-									}}
-								/>
-								<div class="step-draft-actions">
-									<button
-										class="step-confirm-btn"
-										onclick={addStep}>Add</button
-									>
-									<button
-										class="step-cancel-btn"
-										onclick={() => {
-											addingStep = false;
-											draftText = "";
-										}}>Cancel</button
-									>
-								</div>
-							</div>
-						</li>
-					{/if}
-				</ol>
-			{/if}
-		</section>
+		<StepList
+			bind:listSteps
+			onAddStep={(text) => addStep(props.id, text)}
+			onUpdateStep={updateStep}
+			onDeleteStep={deleteStep}
+			onReorderStep={reorderStep}
+		/>
 	</div>
 </main>
