@@ -1,14 +1,52 @@
 <script lang="ts">
+    import { PUBLIC_URL } from "$env/static/public";
+    import type { IngredientRes } from "$lib/types";
+
     let {
-        listIngredients,
-        getPriority,
-        toggleDropdown,
-        openDropdown,
-        priorities,
-        setPriority,
-        deleteIngredient,
+        listIngredients = $bindable(),
+        onDeleteIngredient,
+    }: {
+        listIngredients: Array<IngredientRes & { priority?: string }>;
+        onDeleteIngredient: (e: MouseEvent, item: IngredientRes) => void;
     } = $props();
+
+    let openDropdown: string | null = $state(null);
+
+    const priorities = [
+        { value: "high", label: "High", color: "#f87171", bg: "#fef2f2" },
+        { value: "medium", label: "Medium", color: "#fb923c", bg: "#fff7ed" },
+        { value: "low", label: "Low", color: "#4ade80", bg: "#f0fdf4" },
+        { value: "none", label: "None", color: "#94a3b8", bg: "#f1f5f9" },
+    ];
+
+    const getPriority = (value: string) =>
+        priorities.find((p) => p.value === value) ?? priorities[3];
+
+    const toggleDropdown = (e: MouseEvent, ingredientId: string) => {
+        e.stopPropagation();
+        openDropdown = openDropdown === ingredientId ? null : ingredientId;
+    };
+
+    const setPriority = async (i: IngredientRes, priority: string) => {
+        const response = await fetch(`${PUBLIC_URL}/ingredient`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...i, current_amount: priority }),
+        });
+        if (!response.ok) {
+            console.log(`[ERROR] Unable to update priority`);
+            return;
+        }
+        listIngredients = listIngredients.map((item) =>
+            item.ingredient_id === i.ingredient_id
+                ? { ...item, priority, current_amount: priority }
+                : item,
+        );
+        openDropdown = null;
+    };
 </script>
+
+<svelte:window onclick={() => (openDropdown = null)} />
 
 <section class="list-section">
     <h2 class="section-title">Ingredients</h2>
@@ -79,7 +117,7 @@
                         </div>
                         <button
                             class="remove-btn"
-                            onclick={(e) => deleteIngredient(e, item)}
+                            onclick={(e) => onDeleteIngredient(e, item)}
                         >
                             Remove
                         </button>

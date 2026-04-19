@@ -110,15 +110,17 @@
 		e.preventDefault();
 		const formData = new FormData(e.target as HTMLFormElement);
 		const response = await postIngredient(props.id, formData);
-		const data = await response.json();
+		const ingredient = await response.json();
 		if (response.ok) {
 			listIngredients.push({
-				id: data.id,
+				id: props.id,
+				ingredient_id: ingredient.id,
 				name: formData.get("ingredient") as string,
 				amount: Number(formData.get("amount")),
 				specifier: formData.get("specifier"),
 				priority: "none",
 			});
+			(e.target as HTMLFormElement).reset();
 		}
 	};
 
@@ -135,29 +137,22 @@
 	};
 
 	const setPriority = async (i: IngredientRes, priority: string) => {
-		i.current_amount = priority;
-		console.log(`Sending ingredient with amount: ${i.current_amount}`);
 		const response = await fetch(`${PUBLIC_URL}/ingredient`, {
 			method: "PATCH",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify(i),
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ ...i, current_amount: priority }),
 		});
-		const msg = await response.text();
 		if (!response.ok) {
-			console.log(`Successfully updated Ingredient`);
-			console.log(`[ERROR] Unable to update amount: ${msg}`);
+			console.log(`[ERROR] Unable to update priority`);
 			return;
 		}
 		listIngredients = listIngredients.map((item) =>
 			item.ingredient_id === i.ingredient_id
-				? { ...item, priority }
+				? { ...item, priority, current_amount: priority }
 				: item,
 		);
 		openDropdown = null;
 	};
-
 	const toggleDropdown = (e: MouseEvent, ingredientId: string) => {
 		e.stopPropagation();
 		openDropdown = openDropdown === ingredientId ? null : ingredientId;
@@ -259,19 +254,11 @@
 			/>
 		{/if}
 
-		<!-- Add Ingredient -->
 		<IngredientForm {addIngredient} />
-		<!-- Ingredients list -->
 		<IngredientList
-			{listIngredients}
-			{getPriority}
-			{toggleDropdown}
-			{openDropdown}
-			{priorities}
-			{setPriority}
-			{deleteIngredient}
+			bind:listIngredients
+			onDeleteIngredient={deleteIngredient}
 		/>
-		<!-- Steps -->
 		<StepList
 			bind:listSteps
 			onAddStep={(text) => addStep(props.id, text)}
