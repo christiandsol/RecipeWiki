@@ -10,7 +10,7 @@
         onDeleteIngredient: (e: MouseEvent, item: IngredientRes) => void;
     } = $props();
 
-    let openDropdown: string | null = $state(null);
+    let openDropdown: number | null = $state(null);
 
     const priorities = [
         { value: "high", label: "High", color: "#f87171", bg: "#fef2f2" },
@@ -22,7 +22,7 @@
     const getPriority = (value: string) =>
         priorities.find((p) => p.value === value) ?? priorities[3];
 
-    const toggleDropdown = (e: MouseEvent, ingredientId: string) => {
+    const toggleDropdown = (e: MouseEvent, ingredientId: number) => {
         e.stopPropagation();
         openDropdown = openDropdown === ingredientId ? null : ingredientId;
     };

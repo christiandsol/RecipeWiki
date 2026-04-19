@@ -28,5 +28,5 @@ export type Ingredients = {
 
 export type GetStepResult = {
 	step_id: number;
-	step_number: string;
+	step_number: number;
 }

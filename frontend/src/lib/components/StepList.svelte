@@ -1,4 +1,6 @@
 <script lang="ts">
+    import type { GetStepResult } from "$lib/types";
+
     let {
         listSteps = $bindable(),
         onAddStep,
@@ -7,9 +9,7 @@
         onReorderStep,
     }: {
         listSteps: Array<{ id: number; text: string; stepNumber: number }>;
-        onAddStep: (
-            text: string,
-        ) => Promise<{ step_id: number; step_number: number } | null>;
+        onAddStep: (text: string) => Promise<GetStepResult | null>;
         onUpdateStep: (id: number, text: string) => Promise<boolean>;
         onDeleteStep: (id: number) => Promise<boolean>;
         onReorderStep: (
@@ -31,10 +31,12 @@
         const text = draftText.trim();
         const data = await onAddStep(text);
         if (!data) return;
-        listSteps = [
-            ...listSteps,
-            { id: data.step_id, text, stepNumber: data.step_number },
-        ];
+
+        listSteps.push({
+            id: data.step_id,
+            text: draftText.trim(),
+            stepNumber: data.step_number,
+        });
         draftText = "";
         addingStep = false;
     };
@@ -218,7 +220,7 @@
                                     if (e.key === "Escape")
                                         editingStepId = null;
                                 }}
-                            />
+                            ></textarea>
                             <div class="step-draft-actions">
                                 <button
                                     class="step-confirm-btn"
@@ -276,7 +278,7 @@
                                     draftText = "";
                                 }
                             }}
-                        />
+                        ></textarea>
                         <div class="step-draft-actions">
                             <button
                                 class="step-confirm-btn"

@@ -65,12 +65,12 @@
         onblur={(e) => updateRecipe("name", e.currentTarget.value)}
         rows="1"
         placeholder="Recipe name"
-    />
+    ></textarea>
     <textarea
         class="recipe-caption-desc-input"
         value={recipe.description}
         onblur={(e) => updateRecipe("description", e.currentTarget.value)}
         rows="2"
         placeholder="Add a description"
-    />
+    ></textarea>
 </div>
