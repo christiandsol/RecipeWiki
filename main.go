@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 
 	c "github.com/christiandsol/main/controller"
 	"github.com/christiandsol/main/db"
@@ -118,7 +119,16 @@ func main() {
 	mux.HandleFunc("POST /recipe", global.AddRecipe)
 	mux.HandleFunc("PATCH /recipe", global.UpdateRecipe)
 	mux.HandleFunc("DELETE /recipe", global.DeleteRecipe)
-	mux.HandleFunc("GET /recipe/{id}", global.GetRecipe)
+	mux.HandleFunc("GET /recipe/{id}", func(w http.ResponseWriter, r *http.Request) {
+		// If request accepts HTML, it's a browser navigation - serve the SvelteKit app
+		accept := r.Header.Get("Accept")
+		if strings.Contains(accept, "text/html") {
+			http.ServeFile(w, r, "./frontend/build/index.html")
+			return
+		}
+		// Otherwise it's an API call - serve JSON
+		global.GetRecipe(w, r)
+	})
 	//steps
 	mux.HandleFunc("GET /steps/{id}", global.GetSteps)
 	mux.HandleFunc("POST /step", global.AddStep)
