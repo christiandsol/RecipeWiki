@@ -127,7 +127,15 @@ func main() {
 	mux.HandleFunc("PATCH /step", global.UpdateStep)
 	// fridge
 	mux.HandleFunc("GET /fridge", global.GetFridge)
-	mux.Handle("/", http.FileServer(http.Dir("./frontend/build")))
+	// mux.Handle("/", http.FileServer(http.Dir("./frontend/build")))
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := "./frontend/build" + r.URL.Path
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			http.ServeFile(w, r, "./frontend/build/index.html")
+			return
+		}
+		http.FileServer(http.Dir("./frontend/build")).ServeHTTP(w, r)
+	}))
 	// Image server
 	mux.Handle("/images/", http.StripPrefix("/images/", http.FileServer(http.Dir(global.ImgDir))))
 	err = http.ListenAndServe("0.0.0.0:8080", CorsHandler(mux))
