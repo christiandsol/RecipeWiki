@@ -35,7 +35,7 @@
 
 	$effect(() => {
 		const fetchAll = async () => {
-			const response = await fetch(`${SERVER_URL}/fridge`);
+			const response = await fetch(`${SERVER_URL}/api/fridge`);
 			if (!response.ok) {
 				loading = false;
 				return;
@@ -53,7 +53,7 @@
 	});
 
 	const setPriority = async (i: IngredientRes, priority: string) => {
-		const response = await fetch(`${PUBLIC_URL}/ingredient`, {
+		const response = await fetch(`${PUBLIC_URL}/api/ingredient`, {
 			method: "PATCH",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ ...i, current_amount: priority }),

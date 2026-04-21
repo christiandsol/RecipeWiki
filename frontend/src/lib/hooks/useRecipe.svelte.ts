@@ -9,7 +9,7 @@ export const useRecipe = (id: number) => {
 	let heroPreviewUrl: string | null = $state(null);
 	$effect(() => {
 		const getRecipe = async () => {
-			const response = await fetch(`${SERVER_URL}/recipe/${id}`);
+			const response = await fetch(`${SERVER_URL}/api/recipe/${id}`);
 			const recipe = await response.json();
 		};
 		getRecipe();

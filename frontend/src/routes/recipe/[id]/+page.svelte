@@ -34,9 +34,12 @@
 
 	$effect(() => {
 		const getRecipe = async () => {
-			const response = await fetch(`${SERVER_URL}/recipe/${props.id}`, {
-				method: "GET",
-			});
+			const response = await fetch(
+				`${SERVER_URL}/api/recipe/${props.id}`,
+				{
+					method: "GET",
+				},
+			);
 			const data = await response.json();
 			recipe = data;
 		};
@@ -46,7 +49,7 @@
 	// get ingredients
 	$effect(() => {
 		const send = async () => {
-			const response = await fetch(`${PUBLIC_URL}/ingredients`, {
+			const response = await fetch(`${PUBLIC_URL}/api/ingredients`, {
 				method: "POST",
 				body: JSON.stringify({ id: props.id }),
 			});
@@ -69,7 +72,7 @@
 
 	$effect(() => {
 		const getSteps = async () => {
-			const response = await fetch(`${SERVER_URL}/steps/${props.id}`);
+			const response = await fetch(`${SERVER_URL}/api/steps/${props.id}`);
 			if (!response.ok) return;
 			const data = await response.json();
 			if (data.steps != null) {
@@ -152,7 +155,7 @@
 	};
 
 	const deleteStep = async (stepId: number): Promise<boolean> => {
-		const response = await fetch(`${SERVER_URL}/step`, {
+		const response = await fetch(`${SERVER_URL}/api/step`, {
 			method: "DELETE",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ id: stepId }),

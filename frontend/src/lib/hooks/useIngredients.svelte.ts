@@ -6,7 +6,7 @@ export function useIngredients(id: number) {
 
 	$effect(() => {
 		const get = async () => {
-			const response = await fetch(`${PUBLIC_URL}/ingredients`, {
+			const response = await fetch(`${PUBLIC_URL}/api/ingredients`, {
 				method: "POST",
 				body: JSON.stringify({ id }),
 			});

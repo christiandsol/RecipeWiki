@@ -17,7 +17,7 @@ export const patchRecipe = async (
 	if (field === "image") {
 		formData.append("image", value as File);
 	}
-	const response = await fetch(`${SERVER_URL}/recipe`, {
+	const response = await fetch(`${SERVER_URL}/api/recipe`, {
 		method: "PATCH",
 		body: formData,
 	});
@@ -25,7 +25,7 @@ export const patchRecipe = async (
 };
 
 export const fetchRecipe = async (recipeId: number) => {
-	const response = await fetch(`${SERVER_URL}/recipe/${recipeId}`);
+	const response = await fetch(`${SERVER_URL}/api/recipe/${recipeId}`);
 	if (!response.ok) return null;
 	return response.json();
 };

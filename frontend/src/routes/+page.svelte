@@ -33,7 +33,7 @@
 	// Get recipes from server on mount
 	$effect(() => {
 		const getRecipes = async () => {
-			const response = await fetch(`${SERVER_URL}/recipes`, {
+			const response = await fetch(`${SERVER_URL}/api/recipes`, {
 				method: "GET",
 			});
 			const data: Recipes = await response.json();
@@ -70,7 +70,7 @@
 	export const addRecipe = async (e: SubmitEvent) => {
 		e.preventDefault();
 		const formData = new FormData(e.target as HTMLFormElement);
-		const response = await fetch(`${SERVER_URL}/recipe`, {
+		const response = await fetch(`${SERVER_URL}/api/recipe`, {
 			method: "POST",
 			body: formData,
 		});
@@ -95,7 +95,7 @@
 	};
 
 	export const deleteRecipe = async (e: MouseEvent, recipeId: number) => {
-		const response = await fetch(`${PUBLIC_URL}/recipe`, {
+		const response = await fetch(`${PUBLIC_URL}/api/recipe`, {
 			method: "DELETE",
 			body: JSON.stringify({ recipe_id: recipeId }),
 		});

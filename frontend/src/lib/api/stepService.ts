@@ -10,7 +10,7 @@ export const addStep = async (
 	text: string
 ): Promise<GetStepResult | null> => {
 	if (!text.trim()) return;
-	const response = await fetch(`${SERVER_URL}/step`, {
+	const response = await fetch(`${SERVER_URL}/api/step`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({
@@ -25,7 +25,7 @@ export const addStep = async (
 export const updateStep = async (step_id: number, newText: string): Promise<boolean> => {
 	const trimmedText = newText.trim()
 	if (!trimmedText) return false;
-	const response = await fetch(`${SERVER_URL}/step`, {
+	const response = await fetch(`${SERVER_URL}/api/step`, {
 		method: "PATCH",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({ id: step_id, text: trimmedText }),
@@ -34,7 +34,7 @@ export const updateStep = async (step_id: number, newText: string): Promise<bool
 };
 
 export const deleteStep = async (stepId: number) => {
-	const response = await fetch(`${SERVER_URL}/step`, {
+	const response = await fetch(`${SERVER_URL}/api/step`, {
 		method: "DELETE",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({ id: stepId }),
@@ -49,7 +49,7 @@ export const reorderStep = async (
 	before: number,
 	after: number,
 ) => {
-	const response = await fetch(`${SERVER_URL}/step/reorder`, {
+	const response = await fetch(`${SERVER_URL}/api/step/reorder`, {
 		method: "PATCH",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({ step_id: stepId, before, after }),

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
 
 	c "github.com/christiandsol/main/controller"
 	"github.com/christiandsol/main/db"
@@ -25,10 +24,8 @@ func main() {
 		fmt.Printf("Error opening file .env, error: %v", err)
 		return
 	}
-
 	scanner := bufio.NewScanner(file)
 	var envs = Env{}
-
 	for scanner.Scan() {
 		key, value := parseToEqual(scanner.Text())
 		switch key {
@@ -50,11 +47,9 @@ func main() {
 			fmt.Println("Unknown input")
 		}
 	}
-
 	if err := scanner.Err(); err != nil {
 		fmt.Printf("[ERROR] Scanner error: %v", err)
 	}
-
 	URI := fmt.Sprintf("postgres://%v:%v@%v:%v/%v",
 		envs.POSTGRES_USER,
 		envs.POSTGRES_PASSWORD,
@@ -69,7 +64,6 @@ func main() {
 		return
 	}
 	defer pool.Close()
-
 	imgDirExists, err := exists(envs.IMAGE_DIR)
 	if err != nil {
 		fmt.Printf("[ERROR] Error opening image: %v", err)
@@ -84,21 +78,17 @@ func main() {
 		}
 	}
 	fmt.Println("Successfully Created Image directory")
-
 	global := c.Global{
 		Conn:   pool,
 		ImgDir: envs.IMAGE_DIR,
 	}
-
 	defer pool.Close()
 	fmt.Println("Connected!")
-
 	err = file.Close()
 	if err != nil {
 		fmt.Printf("Error closing file %v", err)
 		return
 	}
-
 	err = db.RunMigrations(pool)
 	if err != nil {
 		fmt.Println("Unable to migrate:", err)
@@ -107,37 +97,27 @@ func main() {
 	if err != nil {
 		fmt.Printf("Unable to migrate %v", err)
 	}
-
 	mux := http.NewServeMux()
-	//ingredients
-	mux.HandleFunc("POST /ingredients", global.GetIngredients)
-	mux.HandleFunc("POST /ingredient", global.AddIngredient)
-	mux.HandleFunc("DELETE /ingredient", global.DeleteIngredient)
-	mux.HandleFunc("PATCH /ingredient", global.UpdateIngredient)
+	// ingredients
+	mux.HandleFunc("POST /api/ingredients", global.GetIngredients)
+	mux.HandleFunc("POST /api/ingredient", global.AddIngredient)
+	mux.HandleFunc("DELETE /api/ingredient", global.DeleteIngredient)
+	mux.HandleFunc("PATCH /api/ingredient", global.UpdateIngredient)
 	// recipes
-	mux.HandleFunc("GET /recipes", global.GetRecipes)
-	mux.HandleFunc("POST /recipe", global.AddRecipe)
-	mux.HandleFunc("PATCH /recipe", global.UpdateRecipe)
-	mux.HandleFunc("DELETE /recipe", global.DeleteRecipe)
-	mux.HandleFunc("GET /recipe/{id}", func(w http.ResponseWriter, r *http.Request) {
-		// If request accepts HTML, it's a browser navigation - serve the SvelteKit app
-		accept := r.Header.Get("Accept")
-		if strings.Contains(accept, "text/html") {
-			http.ServeFile(w, r, "./frontend/build/index.html")
-			return
-		}
-		// Otherwise it's an API call - serve JSON
-		global.GetRecipe(w, r)
-	})
-	//steps
-	mux.HandleFunc("GET /steps/{id}", global.GetSteps)
-	mux.HandleFunc("POST /step", global.AddStep)
-	mux.HandleFunc("DELETE /step", global.DeleteStep)
-	mux.HandleFunc("PATCH /step/reorder", global.ReorderStep)
-	mux.HandleFunc("PATCH /step", global.UpdateStep)
+	mux.HandleFunc("GET /api/recipes", global.GetRecipes)
+	mux.HandleFunc("POST /api/recipe", global.AddRecipe)
+	mux.HandleFunc("PATCH /api/recipe", global.UpdateRecipe)
+	mux.HandleFunc("DELETE /api/recipe", global.DeleteRecipe)
+	mux.HandleFunc("GET /api/recipe/{id}", global.GetRecipe)
+	// steps
+	mux.HandleFunc("GET /api/steps/{id}", global.GetSteps)
+	mux.HandleFunc("POST /api/step", global.AddStep)
+	mux.HandleFunc("DELETE /api/step", global.DeleteStep)
+	mux.HandleFunc("PATCH /api/step/reorder", global.ReorderStep)
+	mux.HandleFunc("PATCH /api/step", global.UpdateStep)
 	// fridge
-	mux.HandleFunc("GET /fridge", global.GetFridge)
-	// mux.Handle("/", http.FileServer(http.Dir("./frontend/build")))
+	mux.HandleFunc("GET /api/fridge", global.GetFridge)
+	// Frontend fallback
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := "./frontend/build" + r.URL.Path
 		if _, err := os.Stat(path); os.IsNotExist(err) {

@@ -9,7 +9,7 @@ export function useSteps(id: number) {
 
 	$effect(() => {
 		const get = async () => {
-			const response = await fetch(`${SERVER_URL}/steps/${id}`);
+			const response = await fetch(`${SERVER_URL}/api/steps/${id}`);
 			if (!response.ok) return;
 			const data = await response.json();
 			if (data.steps != null) {
